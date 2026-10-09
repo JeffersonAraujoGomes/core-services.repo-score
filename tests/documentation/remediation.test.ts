@@ -5,7 +5,8 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { analyze } from "../../src/analyze.js";
 import { ApplyError, applyChanges } from "../../src/remediation/apply.js";
-import { finishFix, FixError, previewFixes, resumeFix, sealFix, startFix } from "../../src/remediation/engine.js";
+import { finishFix, fixTarget, FixError, previewFixes, resumeFix, sealFix, startFix } from "../../src/remediation/engine.js";
+import { formatSeal } from "../../src/remediation/format.js";
 import { HOOK_FILES } from "../../src/groups/documentation/sdd/templates.js";
 import { cleanupFixtures, makeRepo, type FixtureRepo } from "../fixture-repo.js";
 import { RUBRIC_PATH } from "../helpers.js";
@@ -29,7 +30,7 @@ const stdSpec = (title: string, files: string[]) =>
   `# ${title}\n\n## O que a regra faz\n\nDescreve o comportamento atual de ${title}.\n\n## Parâmetros\n\nSem parâmetros: a regra não depende de valores configuráveis.\n\n## Contexto\n\nExiste por causa da política interna; nada frágil foi encontrado.\n\n---\n\n## Referências técnicas\n\n${files.map((f) => `Arquivo: ${f}`).join("\n")}\n`;
 
 const start = (r: FixtureRepo, actionIds: string[], extra: Partial<Parameters<typeof startFix>[0]> = {}) =>
-  startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds, params: {}, groups: ["documentation"], ...extra });
+  startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds, params: {}, groups: ["documentation"], newBranch: true, ...extra });
 const seal = (r: FixtureRepo, skipHooks = false) => sealFix({ root: r.root, rubricPath: RUBRIC_PATH, skipHooks });
 const branchOf = (r: FixtureRepo) => r.git("symbolic-ref", "--short", "HEAD").trim();
 const sha = (r: FixtureRepo, ref = "HEAD") => r.git("rev-parse", ref).trim();
@@ -561,5 +562,107 @@ describe("sessão única: vários cliques de Otimizar nota, uma só branch", () 
     const b1 = await start(blocked, ["doc-hygiene"]);
     expect(b1.status).toBe("commit_blocked");
     await expect(start(blocked, ["doc-adr"])).rejects.toThrow(/commit bloqueado/);
+  });
+});
+
+describe("branch atual por padrão (só o SDD usa branch nova)", () => {
+  const go = (r: FixtureRepo, ids: string[], extra: Partial<Parameters<typeof startFix>[0]> = {}) =>
+    startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds: ids, params: {}, groups: ["documentation"], ...extra });
+
+  it("ação comum commita na branch atual, sem criar branch, e o seal mede ali mesmo", async () => {
+    const r = dirtyDocsRepo();
+    const before = sha(r);
+    const state = await go(r, ["doc-hygiene"]);
+    expect(state.mode).toBe("in_place");
+    expect(state.branch).toBe("main");
+    expect(branchOf(r)).toBe("main");
+    expect(r.git("branch", "--list").trim().split("\n")).toHaveLength(1);
+    expect(sha(r)).not.toBe(before);
+    expect(r.git("log", "--format=%s", "-1")).toContain("docs(repo-score)");
+    expect(existsSync(path.join(r.root, ".DS_Store"))).toBe(false);
+
+    const sealed = await seal(r);
+    expect(sealed.state.after!.criteria["D8"]).toBe(2);
+    expect(sealed.state.baseline.criteria["D8"]).toBe(0);
+    expect(sealed.state.status).toBe("sealed");
+    expect(formatSeal(sealed)).toContain("BRANCH ATUAL");
+    expect(formatSeal(sealed)).not.toContain("DECISÃO");
+  });
+
+  it("cada clique é independente: o seguinte também vai para a branch atual, sem sessão aberta a conduzir", async () => {
+    const r = dirtyDocsRepo();
+    await go(r, ["doc-hygiene"]);
+    await seal(r);
+    const second = await go(r, ["doc-adr"]);
+    expect(second.mode).toBe("in_place");
+    expect(second.branch).toBe("main");
+    expect(r.git("branch", "--list").trim().split("\n")).toHaveLength(1);
+    expect(r.git("log", "--format=%s", "-3")).toContain("ADRs");
+  });
+
+  it("merge não se aplica; keep encerra; discard desfaz com revert (histórico preservado)", async () => {
+    const r = dirtyDocsRepo();
+    const base = sha(r);
+    await go(r, ["doc-hygiene"]);
+    await seal(r);
+    expect(() => finishFix({ root: r.root, decision: "merge" })).toThrow(/não há merge/);
+    expect(() => finishFix({ root: r.root, decision: "discard" })).toThrow(/--confirm/);
+    const res = finishFix({ root: r.root, decision: "discard", confirm: true });
+    expect(res.message).toContain("revertido");
+    expect(existsSync(path.join(r.root, ".DS_Store"))).toBe(true); // arquivos de volta
+    expect(r.git("status", "--porcelain").trim()).toBe("");
+    expect(r.git("log", "--format=%s", "-3")).toContain("Revert");
+    expect(r.git("merge-base", "--is-ancestor", base, "HEAD").toString()).toBe(""); // o commit anterior segue no histórico
+
+    const k = dirtyDocsRepo();
+    await go(k, ["doc-hygiene"]);
+    expect(finishFix({ root: k.root, decision: "keep" }).message).toContain("seguem na branch main");
+  });
+
+  it("recusa árvore suja e HEAD destacado cai na branch nova; --new-branch força a branch nova", async () => {
+    const dirty = dirtyDocsRepo();
+    dirty.write("novo.txt", "x");
+    await expect(go(dirty, ["doc-hygiene"])).rejects.toThrow(/alterações não commitadas/);
+
+    const detached = dirtyDocsRepo();
+    detached.git("switch", "--detach", "HEAD");
+    expect(fixTarget({ root: detached.root, actionIds: ["doc-hygiene"] }).mode).toBe("new_branch");
+
+    const forced = dirtyDocsRepo();
+    const s = await go(forced, ["doc-hygiene"], { newBranch: true });
+    expect(s.mode).toBe("new_branch");
+    expect(s.branch).toMatch(/^docs\/repo-score-/);
+    expect(branchOf(forced)).toBe(s.branch);
+  });
+
+  it("sdd-adopt continua exigindo branch nova; e com a sessão do SDD aberta, as demais entram nela", async () => {
+    const r = dirtyDocsRepo();
+    expect(fixTarget({ root: r.root, actionIds: ["sdd-adopt"] })).toMatchObject({ mode: "new_branch", reason: expect.stringContaining("sdd-adopt") });
+    expect(fixTarget({ root: r.root, actionIds: ["doc-hygiene", "sdd-adopt"] }).mode).toBe("new_branch");
+    const first = await go(r, ["sdd-adopt"]);
+    expect(first.mode).toBe("new_branch");
+    expect(first.branch).toMatch(/^docs\/repo-score-/);
+    expect(sha(r, "main")).toBe(first.base_commit);
+    const next = await go(r, ["doc-hygiene"]);
+    expect(next.branch).toBe(first.branch);
+    expect(next.session!.reused).toBe(true);
+    expect(fixTarget({ root: r.root, actionIds: ["doc-hygiene"] }).session?.branch).toBe(first.branch);
+  });
+
+  it("commit bloqueado por hook na branch atual exige resume; --skip-hooks só com aprovação", async () => {
+    const r = dirtyDocsRepo();
+    mkdirSync(path.join(r.root, ".githooks"), { recursive: true });
+    writeFileSync(path.join(r.root, ".githooks/pre-commit"), "#!/bin/sh\necho bloqueado >&2\nexit 1\n");
+    chmodSync(path.join(r.root, ".githooks/pre-commit"), 0o755);
+    r.git("add", "-A");
+    r.git("-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", "chore: hook");
+    r.git("config", "core.hooksPath", ".githooks");
+    const blocked = await go(r, ["doc-hygiene"]);
+    expect(blocked.status).toBe("commit_blocked");
+    expect(blocked.mode).toBe("in_place");
+    await expect(go(r, ["doc-adr"])).rejects.toThrow(/commit bloqueado/);
+    const resumed = await resumeFix({ root: r.root, skipHooks: true });
+    expect(resumed.status).toBe("started");
+    expect(r.git("status", "--porcelain").trim()).toBe("");
   });
 });

@@ -411,12 +411,14 @@ footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
     const topId = list.filter((f) => f.prompt && f.potential).sort((x, y) => y.potential.gain_total - x.potential.gain_total)[0]?.id;
     const cards = list.map((f) => {
       const missing = f.requires.filter((r) => !r.found);
+      const fresh = f.branch === "new";
       const cmdBox = f.prompt ? h("div", { class: "fix-cmd", id: "opt-" + f.id, hidden: "" },
-        h("ol", {}, h("li", {}, "Cole o comando na sessão do Claude e envie."), h("li", {}, "O Claude mostra o custo em tokens e pede a sua confirmação antes de alterar qualquer coisa."), h("li", {}, "As mudanças vão para a branch nova da sessão (a mesma para todos os botões); o merge é decisão sua.")),
+        h("ol", {}, h("li", {}, "Cole o comando na sessão do Claude e envie."), h("li", {}, "O Claude mostra o custo em tokens e pede a sua confirmação antes de alterar qualquer coisa."),
+          h("li", {}, fresh ? "Esta ação usa uma branch nova (a atual não é tocada); o merge é decisão sua." : "As mudanças são commitadas na branch atual, um commit por ação, e dá para desfazer.")),
         h("pre", {}, f.prompt)) : null;
       const gain = f.potential ? h("div", { class: "gain-big", title: "teto: se os critérios medidos abaixo de 2 chegarem a 2" }, h("span", {}, "ganho potencial"), h("b", {}, `até +${NF(1).format(f.potential.gain_total)} pts`)) : null;
       const cta = f.prompt
-        ? h("div", { class: "fix-cta" }, gain, optimizeCta(f, cmdBox), h("span", { class: "hint" }, f.tokens ? `≈ ${tokFmt(f.tokens.low)}–${tokFmt(f.tokens.high)} tokens · branch nova` : "0 tokens · branch nova"))
+        ? h("div", { class: "fix-cta" }, gain, optimizeCta(f, cmdBox), h("span", { class: "hint" }, (f.tokens ? `≈ ${tokFmt(f.tokens.low)}–${tokFmt(f.tokens.high)} tokens` : "0 tokens") + (fresh ? " · branch nova" : " · branch atual")))
         : h("div", { class: "fix-cta plain" }, "Só avisos: não há correção automática a iniciar.");
       return h("div", { class: "fix" },
         h("div", {},
@@ -431,7 +433,7 @@ footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
         cta, cmdBox);
     });
     return h("div", {}, h("div", { class: "card" }, cards),
-      h("p", { class: "callout" }, "Nada é alterado por este relatório. ", h("b", {}, "Otimizar nota"), " copia o comando que inicia só aquela correção na sessão do Claude: as mudanças vão para uma ", h("b", {}, "branch nova"), " e, se você clicar em mais de um botão, todas entram na ", h("b", {}, "mesma branch"), " até você decidir o merge; a nota é recalculada nela. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));
+      h("p", { class: "callout" }, "Nada é alterado por este relatório. ", h("b", {}, "Otimizar nota"), " copia o comando que inicia só aquela correção na sessão do Claude. As mudanças são commitadas na ", h("b", {}, "branch atual"), ", um commit por ação, e dá para desfazer; só a adoção do SDD usa uma ", h("b", {}, "branch nova"), " (e, com uma sessão assim aberta, os demais botões entram nela). A nota é recalculada depois. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));
   }
   function panels() {
     const list = D.panels || [];

@@ -52,6 +52,11 @@ export interface Action {
   criteria: string[];
   /** auto = só script (0 tokens); guided = o Claude redige (gasta tokens); mixed = os dois. */
   kind: "auto" | "guided" | "mixed";
+  /**
+   * Onde a ação grava. `current` (padrão): commits na branch atual, um por ação, fáceis de reverter. `new`: só quando a
+   * ação não pode rodar na branch atual (ex.: o SDD, cujos hooks barram os commits) e precisa de uma branch dedicada.
+   */
+  branch?: "new" | "current";
   requires: Requirement[];
   params?: ParamSpec[];
   plan(ctx: Ctx, params: Record<string, string>): ActionPlan | null;

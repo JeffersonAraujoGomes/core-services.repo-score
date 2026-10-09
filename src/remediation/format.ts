@@ -24,9 +24,16 @@ export function formatSuggestions(fixes: FixSuggestion[]): string {
   return L.join("\n");
 }
 
-export function formatPreview(items: PreviewItem[], session?: FixState | null): string {
+export function formatPreview(items: PreviewItem[], target?: { mode: "in_place" | "new_branch"; branch: string | null; reason: string; session: FixState | null }): string {
   if (items.length === 0) return "Nada a alterar: nenhuma das ações selecionadas tem trabalho a fazer.";
-  const L = [session ? `PRÉVIA (nada foi escrito). Há uma sessão aberta: ao aplicar, as ações entram na MESMA branch ${session.branch}, sem criar outra. A prévia considera a branch atual; para ver o efeito sobre a sessão, rode-a com a branch da sessão ativa.` : "PRÉVIA (nada foi escrito; nenhuma branch foi criada):"];
+  const where = !target
+    ? "PRÉVIA (nada foi escrito)."
+    : target.session
+      ? `PRÉVIA (nada foi escrito). Há uma sessão aberta: ao aplicar, as ações entram na MESMA branch ${target.session.branch}, sem criar outra. A prévia considera a branch atual; para ver o efeito sobre a sessão, rode-a com a branch da sessão ativa.`
+      : target.mode === "in_place"
+        ? `PRÉVIA (nada foi escrito). Ao aplicar, as alterações serão COMMITADAS NA BRANCH ATUAL (${target.branch}), um commit por ação, sem criar branch nova.`
+        : `PRÉVIA (nada foi escrito). Ao aplicar, será criada uma BRANCH NOVA (${target.reason}); a branch atual não é tocada.`;
+  const L = [where];
   for (const it of items) {
     L.push(`\n[${it.id}] ${it.title}`);
     for (const c of it.changes) L.push(`  ${c.op === "create" ? "criar   " : c.op === "modify" ? "alterar " : "remover "}${c.path}  (${c.lines})${c.note ? ` — ${c.note}` : ""}`);
@@ -68,14 +75,20 @@ function formatReused(s: FixState): string {
 export function formatStart(s: FixState): string {
   if (s.session?.reused) return formatReused(s);
   if (s.status === "nothing_to_do") return `Nada a fazer: as ações selecionadas não produziram alterações. Nenhuma branch foi criada; você segue em ${s.base_branch ?? s.base_commit}.`;
-  const L = [
-    `BRANCH CRIADA: ${s.branch}`,
-    `Origem: ${s.base_branch ?? "(HEAD destacado)"}@${s.base_commit.slice(0, 8)}. A branch de origem NÃO foi alterada.`,
-    `Você está agora em ${s.branch}.`,
-    `Nota de partida (medida na origem): ${s.baseline.grade} · ${fmt(s.baseline.total)}/100`,
-  ];
+  const L = s.mode === "in_place"
+    ? [
+        `ALTERAÇÕES NA BRANCH ATUAL: ${s.branch} (nenhuma branch nova foi criada).`,
+        `Ponto de partida: ${s.branch}@${s.base_commit.slice(0, 8)}; cada ação vira um commit e dá para desfazer (fix finish --decision discard --confirm).`,
+        `Nota de partida: ${s.baseline.grade} · ${fmt(s.baseline.total)}/100`,
+      ]
+    : [
+        `BRANCH CRIADA: ${s.branch}`,
+        `Origem: ${s.base_branch ?? "(HEAD destacado)"}@${s.base_commit.slice(0, 8)}. A branch de origem NÃO foi alterada.`,
+        `Você está agora em ${s.branch}.`,
+        `Nota de partida (medida na origem): ${s.baseline.grade} · ${fmt(s.baseline.total)}/100`,
+      ];
   if (s.commits.length) {
-    L.push("Commits na branch nova:");
+    L.push(s.mode === "in_place" ? "Commits:" : "Commits na branch nova:");
     for (const c of s.commits) L.push(`  ${c.sha} ${c.subject}`);
   }
   if (s.status === "commit_blocked" && s.blocked) {
@@ -109,7 +122,7 @@ export function formatSeal(r: SealResult): string {
   const a = s.after!;
   const delta = s.baseline.total !== null && a.total !== null ? a.total - s.baseline.total : null;
   const L = [
-    `RESULTADO MEDIDO NA BRANCH ${s.branch}@${data.meta.commit ?? "?"}${data.meta.dirty ? " (com alterações não commitadas)" : ""}:`,
+    `RESULTADO MEDIDO NA BRANCH ${s.mode === "in_place" ? "ATUAL " : ""}${s.branch}@${data.meta.commit ?? "?"}${data.meta.dirty ? " (com alterações não commitadas)" : ""}:`,
     `  Antes  (${s.base_branch ?? "origem"}@${s.base_commit.slice(0, 8)}): nota ${s.baseline.grade} · ${fmt(s.baseline.total)}/100`,
     `  Depois (${s.branch}): nota ${a.grade} · ${fmt(a.total)}/100${delta === null ? "" : ` (${delta >= 0 ? "+" : ""}${delta.toFixed(1)} pts)`}`,
   ];
@@ -137,6 +150,10 @@ export function formatSeal(r: SealResult): string {
   if (r.files) L.push(`Arquivos alterados em relação à origem:\n${r.files.split("\n").map((l) => `  ${l}`).join("\n")}`);
   for (const p of s.post_steps) L.push(`Fora da branch: ${p}`);
   L.push(`Relatório: ${r.report}`);
+  if (s.mode === "in_place") {
+    L.push(`\nAs alterações já estão commitadas em ${s.branch} (nada foi enviado). Para desfazer: fix finish --decision discard --confirm (commits de revert). Não há merge nem decisão pendente.`);
+    return L.join("\n");
+  }
   L.push(`\nDECISÃO (nada foi mesclado nem enviado):\n  merge    → fix finish --decision merge   (mescla ${s.branch} em ${s.base_branch ?? "origem"}, sem push)\n  keep     → fix finish --decision keep    (volta para ${s.base_branch ?? "origem"} e mantém a branch para revisão)\n  discard  → fix finish --decision discard --confirm   (apaga a branch)`);
   return L.join("\n");
 }
@@ -147,7 +164,7 @@ export function formatFinish(r: FinishResult): string {
 
 export function formatState(s: FixState | null): string {
   if (!s) return "Nenhuma correção registrada para este repo.";
-  return `Sessão de correção: ${s.status} · branch ${s.branch} (origem ${s.base_branch ?? "HEAD destacado"}@${s.base_commit.slice(0, 8)}) · ações ${s.actions.join(", ")} · ${s.commits.length} commit(s)`;
+  return `${s.mode === "in_place" ? "Correção na branch atual" : "Sessão de correção"}: ${s.status} · branch ${s.branch} (origem ${s.base_branch ?? "HEAD destacado"}@${s.base_commit.slice(0, 8)}) · ações ${s.actions.join(", ")} · ${s.commits.length} commit(s)`;
 }
 
 export type { ReportData };

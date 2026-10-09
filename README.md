@@ -59,9 +59,9 @@ Grupos não escolhidos ficam fora do cálculo (como dimensão N/A) e o total usa
 
 ## Correções e o SDD (grupo Documentação)
 
-Depois de abrir o relatório, cada ponto de "Como subir a nota" tem um botão **Otimizar nota** que copia o comando para a sessão do Claude e inicia só aquela correção, numa branch nova. As ações são ranqueadas pelo ganho potencial de nota, com tipo (automática, guiada ou mista), tokens estimados e pré-requisitos. A principal é **adotar o SDD** (specs vivas + gate de commit com IA), incorporado do projeto `core-services.sdd-gate-ia`.
+Depois de abrir o relatório, cada ponto de "Como subir a nota" tem um botão **Otimizar nota** que copia o comando para a sessão do Claude e inicia só aquela correção na branch atual (só a adoção do SDD usa branch nova). As ações são ranqueadas pelo ganho potencial de nota, com tipo (automática, guiada ou mista), tokens estimados e pré-requisitos. A principal é **adotar o SDD** (specs vivas + gate de commit com IA), incorporado do projeto `core-services.sdd-gate-ia`.
 
-**Regra de segurança:** nada é alterado na branch atual. Toda correção vai para uma **branch nova** (`docs/repo-score-AAAAMMDD-HHMM`), a nota é **recalculada nessa branch** e comparada com a de partida, e quem decide o merge é o usuário (`merge`, `keep` ou `discard`; nunca há push). Árvore suja é recusada, um commit bloqueado por hook do time não é contornado sem aprovação, e arquivos que não são UTF-8 nunca são reescritos.
+**Onde grava:** as ações comuns commitam na **branch atual**, um commit por ação, e dá para desfazer (`fix finish --decision discard --confirm` cria commits de revert). A adoção do SDD é a exceção: usa uma **branch nova** (`docs/repo-score-AAAAMMDD-HHMM`) e a atual não é tocada; com essa sessão aberta, os demais botões entram nela. A nota é **recalculada** depois e comparada com a de partida; na branch nova quem decide o merge é o usuário (`merge`, `keep` ou `discard`). Nunca há push. Árvore suja é recusada, um commit bloqueado por hook do time não é contornado sem aprovação, e arquivos que não são UTF-8 nunca são reescritos.
 
 ```bash
 CLI=skill/scripts/repo-score.mjs

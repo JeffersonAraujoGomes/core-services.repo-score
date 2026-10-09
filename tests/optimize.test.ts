@@ -20,15 +20,19 @@ const home = () => {
 };
 
 describe("botão Otimizar nota", () => {
-  it("o prompt aciona a skill com a ação e o repo, limita o escopo e exige branch nova", () => {
-    const p = optimizePrompt('/work/meu "repo"', { id: "doc-readme", group: "documentation", title: "README por app", criteria: ["D1"], kind: "guided" });
+  it("o prompt aciona a skill com a ação e o repo, limita o escopo e usa a branch atual (só o SDD, nova)", () => {
+    const p = optimizePrompt('/work/meu "repo"', { id: "doc-readme", group: "documentation", title: "README por app", criteria: ["D1"], kind: "guided", branch: "current" });
     expect(p.split("\n")[0]).toBe('/repo-score otimizar doc-readme "/work/meu \\"repo\\""');
     expect(p).toContain("Ação: doc-readme — README por app");
     expect(p).toContain("critérios: D1");
     expect(p).toContain("somente esta ação");
-    expect(p).toContain("BRANCH NOVA");
+    expect(p).toContain("BRANCH ATUAL");
+    expect(p).not.toContain("BRANCH NOVA (nunca");
     expect(p).toContain("minha confirmação");
-    expect(optimizePrompt("/r", { id: "doc-owners", group: "documentation", title: "t", criteria: [], kind: "auto" })).toContain("0 tokens");
+    const sdd = optimizePrompt("/r", { id: "sdd-adopt", group: "documentation", title: "SDD", criteria: ["D7"], kind: "mixed", branch: "new" });
+    expect(sdd).toContain("BRANCH NOVA");
+    expect(sdd).toContain("MESMA branch");
+    expect(optimizePrompt("/r", { id: "doc-owners", group: "documentation", title: "t", criteria: [], kind: "auto", branch: "current" })).toContain("0 tokens");
   });
 
   it("cada sugestão acionável traz o prompt do próprio ponto; o relatório tem o botão", async () => {
@@ -49,6 +53,6 @@ describe("botão Otimizar nota", () => {
     }
     const html = renderReport(data);
     expect(html).toContain("Otimizar nota");
-    expect(html).toContain("branch nova");
+    expect(html).toContain("branch atual");
   });
 });

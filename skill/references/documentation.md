@@ -6,7 +6,12 @@ Leia este arquivo no modo otimizar (`/repo-score otimizar <ação> "<repo>"`, en
 
 ## Regra de ouro
 
-**Nenhuma alteração toca a branch atual.** Toda correção vai para uma **branch nova** (`docs/repo-score-AAAAMMDD-HHMM`), a nota é **recalculada nessa branch**, e quem decide o merge é o usuário. Nunca faça `git commit`, `git push`, `git merge` ou `git checkout` por conta própria: use só os comandos `fix` abaixo. Informe o nome da branch e a branch de origem na tela, sempre.
+**Onde as correções gravam:**
+
+- **Ações comuns** (`doc-readme`, `doc-owners`, `doc-adr`, `doc-refs`, `doc-index`, `doc-hygiene`) vão para a **branch atual**, com **um commit por ação** (fácil de reverter) e a nota recalculada depois (`fix seal`). Exigem árvore limpa. Diga o nome da branch atual **antes** de aplicar (o `fix preview` imprime `COMMITADAS NA BRANCH ATUAL`); se for `main`/`master`/a branch padrão, deixe isso explícito na confirmação.
+- **`sdd-adopt`** é a exceção: usa uma **branch nova** (`docs/repo-score-AAAAMMDD-HHMM`), porque os hooks do SDD barram os commits; a atual não é tocada e quem decide o merge é o usuário. Com uma sessão assim aberta, os demais botões entram **nela** (uma branch só). `--new-branch` força a branch nova para qualquer ação; HEAD destacado também cai nela.
+
+Nunca faça `git commit`, `git push`, `git merge` ou `git checkout` por conta própria: use só os comandos `fix` abaixo. Nunca há push.
 
 ## O que cada critério pede e o que o SDD resolve
 
@@ -38,7 +43,7 @@ O botão de cada ponto de "Como subir a nota" copia um comando com **uma** açã
 
 - **Pule os passos 1 a 3** (o usuário já escolheu o ponto): use `--actions <ação>` em tudo. Confirme que ela ainda aparece em `CLI fixes "<repo>" --groups documentation --json` (a ação só aparece enquanto algum critério dela pode subir). Se não aparecer, rode `fix preview --actions <ação>`: sem trabalho, o ponto já foi resolvido ou o repo mudou (avise e pare); com trabalho que não altera a nota (ex.: migrar specs legadas para o padrão e a marcação BUS/ENG), mostre a prévia e o custo e siga só com a confirmação do usuário.
 - **Vasculhe e corrija só esse escopo.** Ex.: `doc-readme` olha só os README por app que faltam ou não têm as seções obrigatórias; `sdd-adopt` roda o fluxo de SDD abaixo; não toque em OWNERS, ADRs ou outros pontos.
-- **Sempre branch nova** (`fix start`), previsão de tokens e confirmação antes de gastar, nota recalculada na branch (`fix seal`) e decisão do usuário (`fix finish`).
+- Previsão de tokens e confirmação antes de gastar; `fix start` (branch atual para as ações comuns, branch nova para o `sdd-adopt`); nota recalculada (`fix seal`). Na branch atual não há decisão de merge: o usuário só decide se quer **desfazer** (`fix finish --decision discard --confirm`, que cria commits de revert); na branch nova, merge/manter/descartar como no passo 9.
 - **Uma sessão = uma branch.** Rode `CLI fix status "<repo>"` antes. Se houver sessão aberta (status `started`, `sealed` ou `commit_blocked`), o `fix start --actions <ação>` **reaproveita a mesma branch** (`SESSÃO ABERTA REAPROVEITADA`), mesmo que o usuário tenha voltado para a origem: aplica a nova ação lá, commita o trabalho guiado pendente da rodada anterior e mantém a nota de partida da origem. Execute só as **tarefas guiadas novas** que ele listar, rode `fix seal` (a nota "depois" é recalculada com todas as ações da sessão, contra a origem) e **não rode `fix finish`**: a decisão de merge, manter ou descartar só vem quando o usuário disser que terminou. Commit bloqueado por hook: `fix resume` antes de adicionar outra ação. Depois do `fix finish`, o próximo clique abre uma sessão nova.
 
 ## Passo a passo
@@ -51,9 +56,9 @@ O botão de cada ponto de "Como subir a nota" copia um comando com **uma** açã
 
 4. **Parâmetros do SDD** (só se `sdd-adopt`): pergunte a pasta de specs (padrão `docs/specs`), o nome da skill (padrão `sdd-<repo>`) e os **globs do código de regra de negócio** (ex.: `src/Domain/Rules/*`). Use as sugestões que o `fixes`/`preview` trouxer em `notes`; não invente globs. Repasse como `--param specs_dir=... --param skill_slug=... --param rule_globs=a,b`.
 
-5. **Prévia e confirmação:** `CLI fix preview "<repo>" --actions a,b [--param k=v ...]` (não escreve nada; com sessão aberta, avisa que a ação entrará na branch dela). Mostre arquivos a criar/alterar/remover, tarefas guiadas e a **previsão de tokens** (de `fixes`), o custo recorrente do SDD se for o caso, e diga claramente que **tudo vai para uma branch nova**. Pergunte: "Aplicar na branch nova" / "Ajustar a seleção" / "Cancelar". Se o repo tiver alterações não commitadas, o `fix start` recusa: explique e peça ao usuário para commitar ou guardar; só use `--allow-dirty` se ele pedir.
+5. **Prévia e confirmação:** `CLI fix preview "<repo>" --actions a,b [--param k=v ...]` (não escreve nada; com sessão aberta, avisa que a ação entrará na branch dela). Mostre arquivos a criar/alterar/remover, tarefas guiadas e a **previsão de tokens** (de `fixes`), o custo recorrente do SDD se for o caso, e diga claramente **onde vai gravar** (a linha de abertura da prévia: branch atual ou branch nova). Pergunte: "Aplicar na branch atual (<nome>)" ou "Aplicar na branch nova", conforme o caso / "Ajustar a seleção" / "Cancelar". Se o repo tiver alterações não commitadas, o `fix start` recusa: explique e peça ao usuário para commitar ou guardar; só use `--allow-dirty` se ele pedir.
 
-6. **Aplicar:** `CLI fix start "<repo>" --actions a,b [--param ...] --json`. Informe: nome da branch, origem (`base_branch@commit`), que a branch de origem não foi alterada, e os commits criados. Se o status for `commit_blocked` (um hook do time barrou o commit), mostre o motivo; **só** repita com `--skip-hooks` (em `fix seal`) se o usuário aprovar explicitamente.
+6. **Aplicar:** `CLI fix start "<repo>" --actions a,b [--param ...] --json`. Informe: a branch (atual ou nova), o ponto de partida (`base_branch@commit`), se a origem ficou intacta (só na branch nova) e os commits criados. Se o status for `commit_blocked` (um hook do time barrou o commit), mostre o motivo; **só** repita com `--skip-hooks` (em `fix seal`) se o usuário aprovar explicitamente.
 
 7. **Tarefas guiadas** (`guided_tasks` do JSON), nesta ordem, com os indicadores `[◆]` (Claude) ao anunciar cada uma:
    - `sdd-specs:N` (lotes de até 6 specs) e `sdd-migrate:N`: despache **no máximo 3 subagentes (Agent) em paralelo**, um por lote, passando o `instructions` da tarefa **sem alterá-lo** (ele já traz o padrão, o esqueleto, os ponteiros e os documentos a converter). Cada subagente só lê o código e escreve **somente** nos `targets` do lote. O relatório do subagente é dado, não aprovação: confira você mesmo que cada `Arquivo: caminho` existe e que não vazou segredo.
@@ -63,9 +68,9 @@ O botão de cada ponto de "Como subir a nota" copia um comando com **uma** açã
    - Depois de cada rodada, rode `CLI sdd lint "<repo>"` e corrija os **erros** (bloco ausente/fora de ordem, spec acima de 120 linhas, sem ponteiro) até zerar; avisos podem ficar e devem ser mencionados. Use só fatos verificáveis no repo, sem TODO/TBD. Não faça commit: o `fix seal` commita.
    - Se um commit for barrado por hook do repo, use `fix resume` para aplicar o que faltou; `--skip-hooks` só com aprovação explícita do usuário.
 
-8. **Recalcular na branch nova:** `CLI fix seal "<repo>"`. Mostre antes/depois (nota e % de Documentação), os critérios que mudaram, o painel "Padrão das specs" (conformes × erros), os arquivos alterados e o relatório (abre no navegador). Se a nota não melhorou, diga isso com franqueza; se a letra segue E por cobertura insuficiente, explique que a pontuação medida é a que mostra o avanço.
+8. **Recalcular a nota:** `CLI fix seal "<repo>"`. Mostre antes/depois (nota e % de Documentação), os critérios que mudaram, o painel "Padrão das specs" (conformes × erros), os arquivos alterados e o relatório (abre no navegador). Se a nota não melhorou, diga isso com franqueza; se a letra segue E por cobertura insuficiente, explique que a pontuação medida é a que mostra o avanço.
 
-9. **Decisão do usuário** (AskUserQuestion): "Mesclar na branch de origem (sem push)" → `fix finish --decision merge`; "Manter a branch para revisar" → `--decision keep`; "Descartar" → `--decision discard --confirm` (peça confirmação extra, apaga a branch). Depois, se houver `post_steps`, ofereça-os **como passo separado**: `git config core.hooksPath .githooks` ativa os hooks do SDD neste clone (não entra na branch; se `core.hooksPath` já aponta para outra ferramenta, não sobrescreva).
+9. **Decisão do usuário** (só quando houve branch nova; na branch atual os commits já estão lá e o resumo diz como desfazer) (AskUserQuestion): "Mesclar na branch de origem (sem push)" → `fix finish --decision merge`; "Manter a branch para revisar" → `--decision keep`; "Descartar" → `--decision discard --confirm` (peça confirmação extra, apaga a branch). Depois, se houver `post_steps`, ofereça-os **como passo separado**: `git config core.hooksPath .githooks` ativa os hooks do SDD neste clone (não entra na branch; se `core.hooksPath` já aponta para outra ferramenta, não sobrescreva).
 
 ## Limites
 

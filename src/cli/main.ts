@@ -10,7 +10,7 @@ import { loadPolicy } from "../policy.js";
 import { formatLint, lintSpecs } from "../groups/documentation/sdd/discovery/lint.js";
 import { formatSimulation, simulateSdd } from "../groups/documentation/sdd/discovery/simulate.js";
 import { formatPlan, plan } from "../plan.js";
-import { finishFix, FixError, loadState, parseParams, previewFixes, resumeFix, sealFix, startFix, type Decision } from "../remediation/engine.js";
+import { finishFix, fixTarget, FixError, loadState, parseParams, previewFixes, resumeFix, sealFix, startFix, type Decision } from "../remediation/engine.js";
 import { formatFinish, formatPreview, formatSeal, formatStart, formatState, formatSuggestions } from "../remediation/format.js";
 import { renderReport } from "../report/render.js";
 import { ResultsFileSchema } from "../schema/evidence.js";
@@ -47,14 +47,16 @@ const USAGE = `repo-score <comando>
       Lista as ações de correção dos grupos avaliados, com melhoria potencial de nota, tokens e pré-requisitos.
   fix preview <repo> --actions a,b [--param k=v ...]
       Mostra o que cada ação faria. Não escreve nada e não cria branch.
-  fix start <repo> --actions a,b [--param k=v ...] [--groups a,b] [--allow-dirty] [--skip-hooks] [--branch nome]
-      Cria uma BRANCH NOVA (a atual não é tocada), aplica as ações e commita nela. Ações guiadas devolvem tarefas.
+  fix start <repo> --actions a,b [--param k=v ...] [--groups a,b] [--allow-dirty] [--skip-hooks] [--new-branch] [--branch nome]
+      Aplica as ações e commita (um commit por ação) na BRANCH ATUAL. Só o sdd-adopt, --new-branch, HEAD destacado ou uma
+      sessão já aberta usam uma BRANCH NOVA (a atual não é tocada). Ações guiadas devolvem tarefas.
   fix resume <repo> [--skip-hooks]
       Retoma uma correção com commit bloqueado por hook: commita o que ficou preparado e aplica as ações que não rodaram.
   fix seal <repo> [--skip-hooks]
-      Commita o que faltar na branch nova e RECALCULA A NOTA NELA, comparando com a nota de partida.
+      Commita o que faltar e RECALCULA A NOTA na branch da correção, comparando com a nota de partida.
   fix finish <repo> --decision merge|keep|discard [--confirm]
-      Decisão do usuário: mesclar na branch de origem (sem push), manter a branch para revisão, ou descartá-la.
+      Branch nova: mesclar na origem (sem push), manter para revisar ou descartar. Na branch atual: keep encerra; discard
+      desfaz com commits de revert (--confirm); merge não se aplica.
   fix status <repo>
       Mostra a correção em andamento.
 `;
@@ -296,14 +298,13 @@ async function main(argv: string[]): Promise<number> {
     if (sub === "preview") {
       if (actionIds.length === 0) throw new FixError("informe --actions (veja `fixes`)");
       const items = previewFixes({ root: target, actionIds, params, ...(policyPath ? { policyPath } : {}) });
-      const open = loadState(path.resolve(target));
-      out(items, formatPreview(items, open && ["started", "commit_blocked", "sealed"].includes(open.status) ? open : null));
+      out(items, formatPreview(items, fixTarget({ root: target, actionIds, ...(rest.includes("--new-branch") ? { newBranch: true } : {}) })));
       return 0;
     }
     if (sub === "start") {
       if (actionIds.length === 0) throw new FixError("informe --actions (veja `fixes`)");
       const branch = flag(rest, "branch");
-      const state = await startFix({ root: target, rubricPath, actionIds, params, ...(groups ? { groups } : {}), ...(policyPath ? { policyPath } : {}), allowDirty: rest.includes("--allow-dirty"), skipHooks: rest.includes("--skip-hooks"), ...(branch ? { branchName: branch } : {}) });
+      const state = await startFix({ root: target, rubricPath, actionIds, params, ...(groups ? { groups } : {}), ...(policyPath ? { policyPath } : {}), allowDirty: rest.includes("--allow-dirty"), skipHooks: rest.includes("--skip-hooks"), newBranch: rest.includes("--new-branch"), ...(branch ? { branchName: branch } : {}) });
       out(state, formatStart(state));
       return state.status === "commit_blocked" ? 4 : 0;
     }

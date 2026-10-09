@@ -15,6 +15,8 @@ export interface FixSuggestion {
   /** auto: só script; guided: o Claude redige (tokens); mixed: os dois; manual: só avisos. */
   kind: Action["kind"] | "manual";
   criteria: string[];
+  /** Onde a correção grava: branch atual (padrão) ou uma branch nova (só o SDD). */
+  branch: "new" | "current";
   changes: number;
   guided_tasks: number;
   notes: string[];
@@ -78,6 +80,7 @@ export function buildSuggestions(args: {
         summary: action.summary,
         kind,
         criteria: action.criteria,
+        branch: action.branch ?? "current",
         changes: plan.changes.length,
         guided_tasks: plan.guided.length,
         notes: plan.notes,
@@ -85,7 +88,7 @@ export function buildSuggestions(args: {
         tokens: kind === "auto" || kind === "manual" ? null : (action.estimateTokens?.(ctx, {}) ?? null),
         requires: action.requires.map((r) => ({ tool: r.tool, found: hasCommand(r.tool, r.tool === "git" ? ["--version"] : ["--version"]), why: r.why, blocking: r.blocking })),
         params: action.params ?? [],
-        prompt: kind === "manual" ? null : optimizePrompt(args.root, { id: action.id, group: action.group, title: action.title, criteria: action.criteria, kind }),
+        prompt: kind === "manual" ? null : optimizePrompt(args.root, { branch: action.branch ?? "current", id: action.id, group: action.group, title: action.title, criteria: action.criteria, kind }),
         potential: sim && base.total !== null && sim.total !== null
           ? { criteria: lifted, gain_total: sim.total - base.total, total_after: sim.total, grade_after: sim.grade, dimension_pct_after: dimPct }
           : null,

@@ -32,6 +32,7 @@ export const DOCUMENTATION_ACTIONS: Action[] = [
     summary: "Do zero: manifesto, hooks de commit/push, hook de sessão, seção no README, skill e descoberta das specs. Com SDD já adotado: amplia o perímetro do manifesto e cobre com specs as regras ainda sem documentação. A parte de specs é feita pelo Claude (gasta tokens).",
     criteria: ["D4", "D5", "D6", "D7", "D1", "D8"],
     kind: "mixed",
+    branch: "new", // os hooks do SDD (e o SDD_SKIP) pedem uma branch dedicada para a adoção
     requires: [
       git,
       { tool: "jq", why: "os hooks do SDD leem o manifest com jq e ficam inativos sem ele", blocking: false },

@@ -34,6 +34,8 @@ export interface FixState {
   version: 1;
   repo: string;
   root: string;
+  /** `in_place`: commits na branch atual (padrão; `branch` = a branch atual). `new_branch`: branch dedicada (SDD ou --new-branch). */
+  mode?: "new_branch" | "in_place";
   base_branch: string | null;
   base_commit: string;
   branch: string;
@@ -196,7 +198,24 @@ export interface StartOptions {
   allowDirty?: boolean;
   skipHooks?: boolean;
   branchName?: string;
+  /** Força a branch nova mesmo para ações que gravam na atual. */
+  newBranch?: boolean;
   now?: Date;
+}
+
+/** Onde as ações vão gravar: na branch atual, ou numa branch nova (SDD, --new-branch, HEAD destacado ou sessão aberta). */
+export function fixTarget(opts: { root: string; actionIds: string[]; newBranch?: boolean }): { mode: "in_place" | "new_branch"; branch: string | null; reason: string; session: FixState | null } {
+  const root = topRoot(opts.root);
+  const actions = resolveActions(opts.actionIds);
+  const existing = loadState(root);
+  const session = existing && SESSION_OPEN.includes(existing.status) && existing.mode !== "in_place" && branchExists(root, existing.branch) ? existing : null;
+  if (session) return { mode: "new_branch", branch: session.branch, reason: "há uma sessão de correção aberta: as ações entram na mesma branch dela", session };
+  const current = currentBranch(root);
+  if (opts.newBranch) return { mode: "new_branch", branch: null, reason: "pedido explícito (--new-branch)", session: null };
+  const dedicated = actions.find((a) => a.branch === "new");
+  if (dedicated) return { mode: "new_branch", branch: null, reason: `${dedicated.id} exige branch dedicada`, session: null };
+  if (!current) return { mode: "new_branch", branch: null, reason: "HEAD destacado: não há branch atual para commitar", session: null };
+  return { mode: "in_place", branch: current, reason: "as alterações vão para a branch atual, um commit por ação", session: null };
 }
 
 function commit(root: string, paths: string[] | null, message: string, skipHooks: boolean): CommitInfo | null {
@@ -265,7 +284,12 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
   }
   const existing = loadState(root);
   const now = opts.now ?? new Date();
-  if (existing && SESSION_OPEN.includes(existing.status) && branchExists(root, existing.branch)) return addToSession(opts, root, existing, actions, now);
+  const target = fixTarget({ root, actionIds: opts.actionIds, ...(opts.newBranch ? { newBranch: true } : {}) });
+  if (existing?.mode === "in_place" && existing.status === "commit_blocked" && branchExists(root, existing.branch)) {
+    throw new FixError(`há um commit bloqueado por hook na branch ${existing.branch}; rode "fix resume" (ou "fix seal --skip-hooks", se o usuário aprovar) antes de aplicar outra ação.`);
+  }
+  if (target.session) return addToSession(opts, root, target.session, actions, now);
+  const inPlace = target.mode === "in_place";
   if (!isClean(root) && !opts.allowDirty) {
     throw new FixError("há alterações não commitadas na branch atual. Commite ou guarde (git stash) antes, ou use --allow-dirty (as alterações viajam para a branch nova, misturadas às da correção).");
   }
@@ -278,12 +302,13 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
   const base = await analyze({ root, rubricPath: opts.rubricPath, ...(opts.groups ? { groups: opts.groups } : {}), ...(opts.policyPath ? { policyPath: opts.policyPath } : {}), now });
   persist(base.outDir, base.data, renderReport(base.data));
 
-  // 2. branch nova: nada é alterado na branch atual
-  const branch = uniqueBranchName(root, opts.branchName ?? `docs/repo-score-${stamp(now)}`);
-  git(root, ["switch", "-c", branch]);
+  // 2. branch nova (SDD, --new-branch): a atual não é tocada. Nas demais ações, os commits vão para a branch atual.
+  const branch = inPlace ? baseBranch! : uniqueBranchName(root, opts.branchName ?? `docs/repo-score-${stamp(now)}`);
+  if (!inPlace) git(root, ["switch", "-c", branch]);
 
   const state: FixState = {
     version: 1,
+    mode: inPlace ? "in_place" : "new_branch",
     repo: path.basename(root),
     root,
     base_branch: baseBranch,
@@ -310,8 +335,10 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
   }
 
   if (state.commits.length === 0 && state.guided_tasks.length === 0) {
-    git(root, baseBranch ? ["switch", baseBranch] : ["switch", "--detach", baseCommit]);
-    git(root, ["branch", "-D", branch]);
+    if (!inPlace) {
+      git(root, baseBranch ? ["switch", baseBranch] : ["switch", "--detach", baseCommit]);
+      git(root, ["branch", "-D", branch]);
+    }
     state.status = "nothing_to_do";
   }
   saveState(state);
@@ -398,6 +425,7 @@ export function finishFix(opts: { root: string; decision: Decision; confirm?: bo
   if (!state) throw new FixError("nenhuma correção em andamento neste repo");
   if (["merged", "kept", "discarded", "nothing_to_do"].includes(state.status)) throw new FixError(`a correção já foi concluída (${state.status})`);
   if (!branchExists(root, state.branch)) throw new FixError(`a branch ${state.branch} não existe mais`);
+  if (state.mode === "in_place") return finishInPlace(root, state, opts);
   const back = () => git(root, state.base_branch ? ["switch", state.base_branch] : ["switch", "--detach", state.base_commit]);
 
   if (opts.decision === "discard") {
@@ -427,4 +455,29 @@ export function finishFix(opts: { root: string; decision: Decision; confirm?: bo
   state.status = "merged";
   saveState(state);
   return { state, decision: "merge", message: `Branch ${state.branch} mesclada em ${state.base_branch ?? state.base_commit} (sem push). A branch foi mantida; apague-a quando quiser.` };
+}
+
+/** Correção na branch atual: não há branch para mesclar. `keep` encerra; `discard` desfaz com commits de revert (nada é reescrito). */
+function finishInPlace(root: string, state: FixState, opts: { decision: Decision; confirm?: boolean }): FinishResult {
+  if (opts.decision === "merge") throw new FixError(`as alterações já estão na branch ${state.branch} (commits desta correção): não há merge a fazer. Use keep para encerrar ou discard para desfazer.`);
+  if (opts.decision === "keep") {
+    state.status = "kept";
+    saveState(state);
+    return { state, decision: "keep", message: `Mantido: ${state.commits.length} commit(s) da correção seguem na branch ${state.branch}.` };
+  }
+  if (!opts.confirm) throw new FixError(`desfazer cria commits de revert dos ${state.commits.length} commit(s) desta correção em ${state.branch}; confirme com --confirm`);
+  if (currentBranch(root) !== state.branch) throw new FixError(`você não está na branch ${state.branch}. Rode: git switch ${state.branch}`);
+  if (!isClean(root)) throw new FixError("há alterações não commitadas; commite ou guarde antes de desfazer");
+  const shas = [...state.commits].reverse().map((c) => c.sha);
+  if (shas.length) {
+    try {
+      git(root, ["revert", "--no-edit", ...shas]);
+    } catch (e) {
+      tryGit(root, ["revert", "--abort"]);
+      throw new FixError(`não foi possível reverter (conflito com commits posteriores); nada foi alterado. ${(e as Error).message}`);
+    }
+  }
+  state.status = "discarded";
+  saveState(state);
+  return { state, decision: "discard", message: `Desfeito: ${shas.length} commit(s) revertido(s) em ${state.branch} (o histórico foi preservado, com commits de revert).` };
 }
