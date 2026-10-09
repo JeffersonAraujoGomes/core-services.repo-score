@@ -9,13 +9,13 @@ var __export = (target, all) => {
 import { spawn as spawn2 } from "node:child_process";
 import { existsSync as existsSync8, readFileSync as readFileSync8, writeFileSync as writeFileSync5 } from "node:fs";
 import os2 from "node:os";
-import path23 from "node:path";
+import path28 from "node:path";
 import { fileURLToPath as fileURLToPath2, pathToFileURL } from "node:url";
 
 // src/analyze.ts
 import { createHash as createHash2 } from "node:crypto";
 import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync5, readdirSync as readdirSync2, rmSync, statSync as statSync2, writeFileSync as writeFileSync2 } from "node:fs";
-import path19 from "node:path";
+import path23 from "node:path";
 
 // src/collectors/c12-file-size.ts
 import path2 from "node:path";
@@ -138,9 +138,9 @@ var notApplicable = (id, reason) => ({
 var MAX_EVIDENCE = 25;
 var capEvidence = (list) => list.slice(0, MAX_EVIDENCE);
 var jobEvidence = (name, note) => ({ kind: "job", name, note });
-var round = (n, digits = 2) => {
+var round = (n2, digits = 2) => {
   const f = 10 ** digits;
-  return Math.round(n * f) / f;
+  return Math.round(n2 * f) / f;
 };
 var isTestPath = (rel) => /(^|\/)(tests?|__tests__|spec|specs|e2e|fixtures?|testdata|mocks?)(\/|$)/i.test(rel) || /(\.|_)(test|tests|spec)\.[a-z]+$/i.test(rel) || /\.Tests?(\/|\.)/.test(rel);
 
@@ -577,19 +577,19 @@ function scanConfigText(text, kind) {
   const safe = kind === "yaml" ? safeDocRanges(lines) : [];
   let pendingName = null;
   lines.forEach((line, idx) => {
-    const n = idx + 1;
-    if (safe.some(([a, b]) => n >= a && n <= b)) return;
+    const n2 = idx + 1;
+    if (safe.some(([a, b]) => n2 >= a && n2 <= b)) return;
     for (const p of pairsOf(line, kind)) {
       if (kind === "yaml" && p.key === "name") {
         pendingName = SENSITIVE_KEY.test(p.value) && !NON_VALUE_SUFFIX.test(p.value) ? p.value : null;
         continue;
       }
       if (kind === "yaml" && p.key === "value" && pendingName) {
-        if (!isReference(p.value)) found.set(n, { line: n, key: "value" });
+        if (!isReference(p.value)) found.set(n2, { line: n2, key: "value" });
         pendingName = null;
         continue;
       }
-      if (sensitiveLiteral(p)) found.set(n, { line: n, key: p.key });
+      if (sensitiveLiteral(p)) found.set(n2, { line: n2, key: p.key });
     }
   });
   if (kind === "yaml") {
@@ -668,7 +668,7 @@ var s2HistorySecrets = {
     const shallow = ctx.git(["rev-parse", "--is-shallow-repository"])?.trim() === "true";
     const seen = /* @__PURE__ */ new Map();
     let commit2 = "";
-    let path24 = "";
+    let path29 = "";
     let commits = 0;
     let truncated = false;
     await new Promise((resolve) => {
@@ -685,17 +685,17 @@ var s2HistorySecrets = {
       rl.on("line", (line) => {
         if (line.startsWith("commit ") && /^commit [0-9a-f]{40}$/.test(line)) {
           commit2 = line.slice(7);
-          path24 = "";
+          path29 = "";
           commits += 1;
         } else if (line.startsWith("+++ b/")) {
-          path24 = line.slice(6);
+          path29 = line.slice(6);
         } else if (line.startsWith("+") && !line.startsWith("+++")) {
           const hit = matchHistoryLine(line.slice(1));
           if (hit) {
             seen.set(hit.fingerprint, {
               kind: "commit",
               sha: commit2,
-              path: path24 || void 0,
+              path: path29 || void 0,
               note: hit.name
             });
           }
@@ -886,16 +886,16 @@ function isDocPath(rel, ignoreGlobs) {
 }
 function linesOutsideFences(text) {
   const out = [];
-  let fence = null;
+  let fence2 = null;
   text.split(/\r?\n/).forEach((line, i) => {
     const m = /^\s*(```+|~~~+)/.exec(line);
     if (m) {
       const marker = m[1][0];
-      if (fence === null) fence = marker;
-      else if (fence === marker) fence = null;
+      if (fence2 === null) fence2 = marker;
+      else if (fence2 === marker) fence2 = null;
       return;
     }
-    if (fence === null) out.push({ n: i + 1, line });
+    if (fence2 === null) out.push({ n: i + 1, line });
   });
   return out;
 }
@@ -917,12 +917,12 @@ var looksLikePath = (t) => {
 var isExamplePath = (t) => !/[/.]/.test(t) || /^(caminho|path)\/(do|to)\//i.test(t);
 function extractRefs(text) {
   const out = [];
-  for (const { n, line } of linesOutsideFences(text)) {
+  for (const { n: n2, line } of linesOutsideFences(text)) {
     const seen = /* @__PURE__ */ new Set();
     const push = (kind, raw) => {
       if (seen.has(raw)) return;
       seen.add(raw);
-      out.push({ kind, raw, line: n });
+      out.push({ kind, raw, line: n2 });
     };
     for (const m of line.matchAll(/!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g)) {
       const t = cleanTarget(m[1] ?? "");
@@ -946,9 +946,9 @@ function resolveTarget(kind, raw, fromDoc, fileSet, dirSet) {
   for (let d = dirname(fromDoc); d !== ""; d = dirname(d)) ancestors.push(path7.posix.normalize(path7.posix.join(d, rootRel)));
   const candidates = raw.startsWith("/") ? [rootRel] : kind === "link" ? [docRel] : [path7.posix.normalize(rootRel), docRel, ...ancestors];
   for (const c of candidates) {
-    const norm = c.replace(/\/+$/, "");
-    if (norm.startsWith("..")) continue;
-    if (fileSet.has(norm) || dirSet.has(norm)) return norm;
+    const norm2 = c.replace(/\/+$/, "");
+    if (norm2.startsWith("..")) continue;
+    if (fileSet.has(norm2) || dirSet.has(norm2)) return norm2;
   }
   return null;
 }
@@ -1020,7 +1020,7 @@ function detectApps(ctx) {
   return { apps: [mk("")], source: "repo inteiro" };
 }
 function findInApp(ctx, app, names) {
-  const wanted = names.map((n) => n.toLowerCase());
+  const wanted = names.map((n2) => n2.toLowerCase());
   return ctx.files.find((f) => dirname(f) === app.dir && wanted.includes(path8.posix.basename(f).toLowerCase())) ?? null;
 }
 
@@ -1078,10 +1078,10 @@ function parseCodeowners(text) {
   return out;
 }
 function loadCodeowners(ctx) {
-  const path24 = CODEOWNERS_PATHS.find((p) => ctx.files.includes(p));
-  const text = path24 ? ctx.readText(path24) : null;
-  if (!path24 || text === null) return null;
-  return { path: path24, rules: parseCodeowners(text).map((r) => ({ ...r, re: globToRegex(r.pattern) })) };
+  const path29 = CODEOWNERS_PATHS.find((p) => ctx.files.includes(p));
+  const text = path29 ? ctx.readText(path29) : null;
+  if (!path29 || text === null) return null;
+  return { path: path29, rules: parseCodeowners(text).map((r) => ({ ...r, re: globToRegex(r.pattern) })) };
 }
 function ownersFor(co, dir) {
   const probe = dir === "" ? "" : `${dir}/x`;
@@ -1296,9 +1296,6 @@ var d6Orphans = {
     return [measured("D6", round((considered.length - orphans.length) / considered.length * 100, 1), capEvidence(evidence))];
   }
 };
-
-// src/groups/documentation/collectors/d7-specs-rules.ts
-import path10 from "node:path";
 
 // node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -2116,10 +2113,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path24) {
-  if (!path24)
+function getElementAtPath(obj, path29) {
+  if (!path29)
     return obj;
-  return path24.reduce((acc, key) => acc?.[key], obj);
+  return path29.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -2459,11 +2456,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path24, issues) {
+function prefixIssues(path29, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path24);
+    iss.path.unshift(path29);
     return iss;
   });
 }
@@ -2913,16 +2910,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path24 = []) => {
+  const processError = (error63, path29 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path24, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path29, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path24, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path29, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path24, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path29, ...issue2.path]);
       } else {
-        const fullpath = [...path24, ...issue2.path];
+        const fullpath = [...path29, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -2961,17 +2958,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path24 = []) => {
+  const processError = (error63, path29 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path24, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path29, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path24, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path29, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path24, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path29, ...issue2.path]);
       } else {
-        const fullpath = [...path24, ...issue2.path];
+        const fullpath = [...path29, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -3010,8 +3007,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path24 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path24) {
+  const path29 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path29) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -16714,13 +16711,13 @@ function _promise(Class2, innerType) {
 }
 // @__NO_SIDE_EFFECTS__
 function _custom(Class2, fn, _params) {
-  const norm = normalizeParams(_params);
-  norm.abort ?? (norm.abort = true);
+  const norm2 = normalizeParams(_params);
+  norm2.abort ?? (norm2.abort = true);
   const schema = new Class2({
     type: "custom",
     check: "custom",
     fn,
-    ...norm
+    ...norm2
   });
   return schema;
 }
@@ -19286,17 +19283,17 @@ var ZodArray = /* @__PURE__ */ $constructor("ZodArray", (inst, def) => {
   inst._zod.processJSONSchema = (ctx, json2, params) => arrayProcessor(inst, ctx, json2, params);
   inst.element = def.element;
 }, {
-  min(n, params) {
-    return this.check(_minLength(n, params));
+  min(n2, params) {
+    return this.check(_minLength(n2, params));
   },
   nonempty(params) {
     return this.check(_minLength(1, params));
   },
-  max(n, params) {
-    return this.check(_maxLength(n, params));
+  max(n2, params) {
+    return this.check(_maxLength(n2, params));
   },
-  length(n, params) {
-    return this.check(_length(n, params));
+  length(n2, params) {
+    return this.check(_length(n2, params));
   },
   unwrap() {
     return this.element;
@@ -20113,13 +20110,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path24 = ref.slice(1).split("/").filter(Boolean);
-  if (path24.length === 0) {
+  const path29 = ref.slice(1).split("/").filter(Boolean);
+  if (path29.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path24[0] === defsKey) {
-    const key = path24[1] === void 0 ? void 0 : decodeJSONPointerSegment(path24[1]);
+  if (path29[0] === defsKey) {
+    const key = path29[1] === void 0 ? void 0 : decodeJSONPointerSegment(path29[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -20253,8 +20250,8 @@ function containsRef(value) {
     return Object.values(sub).some(containsRef);
   });
 }
-function plural(n) {
-  return n === 1 ? "element" : "elements";
+function plural(n2) {
+  return n2 === 1 ? "element" : "elements";
 }
 function checkArrayGuards(arraySchema, guards) {
   const guard = z.transform((value) => value).check((payload) => {
@@ -20995,10 +20992,59 @@ function readManifest(ctx) {
   return { state: "ok", manifest: parsed.data };
 }
 
-// src/groups/documentation/collectors/d7-specs-rules.ts
+// src/groups/documentation/shared/rule-files.ts
+import path10 from "node:path";
 var CODE_EXT = /\.(cs|fs|vb|go|kt|kts|java|scala|ts|tsx|js|jsx|mjs|py|rb|php|rs|swift|c|cc|cpp|h|hpp|sql)$/i;
 var DATA_DIR = /(^|\/)(Dtos?|Models?|Entities|Commands|Migrations|RepositoryInterfaces|Interfaces|Properties)(\/|$)/i;
 var INTERFACE_FILE = /^I[A-Z][A-Za-z0-9]*\.[a-z]+$/;
+var PLUMBING_FILE = /(^|\/)(Program|Startup|Worker|MessageReceiver)\.[a-z]+$|(Extensions|Module|Configuration|Settings|Options|Context|Messages?|Dto|Request|Response|Command|Builder|Mapper|Profile|Window|View|ViewModel|Page|Control)\.[a-z]+$/;
+var PLUMBING_DIR = /(^|\/)(Messages|Setup|Telemetry|Infrastructure|Mappings?|Acl|Avro|Views?|ViewModels?|Controls)(\/|$)/i;
+var GLOSSARY_DIR = /(^|\/)(Enums?|Constants?)(\/|$)/i;
+var TEST_DIR = /(^|\/)[^/]*(IntegrationTests?|UnitTests?|LoadTests?|E2E|Tests?)(\/|$)/;
+var isTestLike = (rel) => isTestPath(rel) || TEST_DIR.test(rel);
+var isGeneratedText = (text) => /<auto-generated|@generated|DO NOT EDIT|ISpecificRecord|Avro\.Specific|\[GeneratedCode\(/.test(text.slice(0, 1500));
+function isRuleCandidate(rel) {
+  return CODE_EXT.test(rel) && !isTestLike(rel) && !DATA_DIR.test(rel) && !INTERFACE_FILE.test(path10.posix.basename(rel));
+}
+var BRANCH = /\b(if|else|switch|case|while|foreach|when)\b|&&|\|\||\?\s*[^:\n]{1,40}:/g;
+var NUMBER = /\b\d+(?:\.\d+)?m?\b/g;
+var SQL = /\b(CASE|WHEN|SUM|AVG|POWER|DATEDIFF|COALESCE|ISNULL|GROUP BY|HAVING|JOIN)\b/gi;
+var METHOD = /^\s*(?:(?:public|private|protected|internal|static|async|override|virtual|sealed)\s+)+[\w<>\[\],?.() ]+?\s+(\w+)\s*\(/gm;
+function roleOf(rel) {
+  const b = path10.posix.basename(rel);
+  if (/Rule|Validator|Policy|Strategy|Calculator/.test(b)) return "regra";
+  if (/Handler|Processor/.test(b)) return "handler";
+  if (/Quer(y|ies)|Sql/.test(b)) return "consulta";
+  if (/Service/.test(b)) return "servi\xE7o";
+  return "outro";
+}
+function methodsOf(text) {
+  const out = /* @__PURE__ */ new Set();
+  for (const m of text.matchAll(METHOD)) {
+    const n2 = m[1];
+    if (!["if", "for", "while", "switch", "catch", "using", "lock", "foreach", "return", "new"].includes(n2) && !/^(get|set)$/i.test(n2)) out.add(n2);
+  }
+  return [...out];
+}
+function measureFile(rel, text) {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "").length;
+  const numbers = (text.match(NUMBER) ?? []).filter((n2) => !["0", "1", "2"].includes(n2)).length;
+  const density = (text.match(BRANCH)?.length ?? 0) + numbers * 0.5 + (text.match(SQL)?.length ?? 0);
+  return { path: rel, lines, density: Math.round(density), role: roleOf(rel), methods: methodsOf(text), chars: text.length };
+}
+var MIN_RULE_LINES = 25;
+var MIN_RULE_DENSITY = 8;
+function classifyRuleFile(rel, text) {
+  if (!isRuleCandidate(rel)) return { rule: false, why: "caminho" };
+  if (PLUMBING_FILE.test(rel) || PLUMBING_DIR.test(rel)) return { rule: false, why: "infraestrutura" };
+  if (GLOSSARY_DIR.test(rel)) return { rule: false, why: "glossario" };
+  if (isGeneratedText(text)) return { rule: false, why: "gerado" };
+  const file2 = measureFile(rel, text);
+  if (file2.lines < MIN_RULE_LINES || file2.density < MIN_RULE_DENSITY) return { rule: false, why: "baixa-densidade" };
+  return { rule: true, file: file2 };
+}
+
+// src/groups/documentation/collectors/d7-specs-rules.ts
 function ruleGlobs(ctx) {
   const m = readManifest(ctx);
   const fromManifest = m.state === "ok" ? m.manifest.ruleCodeGlobs : [];
@@ -21008,10 +21054,7 @@ function ruleGlobs(ctx) {
 }
 function ruleFiles(ctx, globs) {
   const res = globs.map(pathspecToRegex);
-  return ctx.files.filter((f) => CODE_EXT.test(f) && !isTestPath(f) && res.some((re) => re.test(f)));
-}
-function isRuleCandidate(rel) {
-  return CODE_EXT.test(rel) && !isTestPath(rel) && !DATA_DIR.test(rel) && !INTERFACE_FILE.test(path10.posix.basename(rel));
+  return ctx.files.filter((f) => CODE_EXT.test(f) && !isTestLike(f) && res.some((re) => re.test(f)));
 }
 function specDocs(ctx) {
   const idx = getDocIndex(ctx);
@@ -21048,7 +21091,11 @@ function ruleUniverse(ctx) {
   const cited = new Map([...citedCode(ctx)].filter(([f]) => !isExcluded(f) && (isRuleCandidate(f) || declaredSet.has(f))));
   const known = /* @__PURE__ */ new Set([...declared, ...cited.keys()]);
   const dirs = new Set([...known].map(dirname));
-  const siblings = ctx.files.filter((f) => isRuleCandidate(f) && !isExcluded(f) && dirs.has(dirname(f)) && !known.has(f));
+  const siblings = ctx.files.filter((f) => {
+    if (isExcluded(f) || !dirs.has(dirname(f)) || known.has(f) || !isRuleCandidate(f)) return false;
+    const text = ctx.readText(f);
+    return text !== null && classifyRuleFile(f, text).rule;
+  });
   const universe = [.../* @__PURE__ */ new Set([...declared, ...cited.keys(), ...siblings])].sort();
   return {
     globs,
@@ -21083,7 +21130,7 @@ var d7SpecsRules = {
     const evidence = [
       ...u.citedOutsidePerimeter.map((f) => ({ kind: "file", path: f, line: 1, note: `citada por ${u.cited.get(f)[0]}, fora do per\xEDmetro (ruleCodeGlobs): o SDD n\xE3o vigia este arquivo` })),
       ...u.declaredUncited.map((f) => ({ kind: "file", path: f, line: 1, note: "no per\xEDmetro, mas nenhuma spec a cita" })),
-      ...u.siblingsUncited.map((f) => ({ kind: "file", path: f, line: 1, note: "irm\xE3 das regras conhecidas, sem spec nem per\xEDmetro (heur\xEDstica)" }))
+      ...u.siblingsUncited.map((f) => ({ kind: "file", path: f, line: 1, note: "irm\xE3 das regras conhecidas (mesma pasta, com l\xF3gica de neg\xF3cio), sem spec nem per\xEDmetro (heur\xEDstica)" }))
     ];
     const value = round(u.linked.length / u.universe.length * 100, 1);
     if (evidence.length === 0) {
@@ -21144,6 +21191,216 @@ function hasCommand(cmd, args = ["--version"]) {
   }
 }
 
+// src/groups/documentation/sdd/audience.ts
+import path11 from "node:path";
+var AUDIENCE_LABEL = { BUS: "regra de neg\xF3cio", ENG: "componente t\xE9cnico" };
+function audienceFromName(file2) {
+  const m = /^\d+(?:\.\d+)*-(BUS|ENG)-/.exec(path11.posix.basename(file2));
+  return m ? m[1] : null;
+}
+var ENG_TOKENS = /* @__PURE__ */ new Set([
+  "reader",
+  "writer",
+  "repository",
+  "repositories",
+  "queries",
+  "query",
+  "sql",
+  "worker",
+  "workers",
+  "consumer",
+  "receiver",
+  "publisher",
+  "producer",
+  "send",
+  "tracker",
+  "factory",
+  "mapper",
+  "extensions",
+  "helper",
+  "helpers",
+  "bucket",
+  "storage",
+  "acl",
+  "kafka",
+  "rabbit",
+  "queue",
+  "cache",
+  "gateway",
+  "adapter",
+  "http",
+  "grpc",
+  "middleware",
+  "scheduler",
+  "job",
+  "provider",
+  "connection",
+  "client",
+  "api",
+  "bootstrap",
+  "retry"
+]);
+var ENG_PATH = /(^|[/.])(Infra|Infrastructure|Worker|Workers|Repositories|Queries|Consumers|Receivers|Storage|Acl|Messaging|Persistence)([/.]|$)/i;
+var TAIL_ONLY = /* @__PURE__ */ new Set(["client", "api"]);
+function tokens(stem2) {
+  return stem2.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+function audienceOfFile(rel) {
+  const stem2 = path11.posix.basename(rel).replace(/\.[^.]+$/, "");
+  const toks = tokens(stem2);
+  const eng = toks.some((t, i) => ENG_TOKENS.has(t) && (!TAIL_ONLY.has(t) || i === toks.length - 1));
+  return eng || ENG_PATH.test(rel) ? "ENG" : "BUS";
+}
+function audienceOfFiles(files) {
+  if (files.length === 0) return "BUS";
+  const eng = files.filter((f) => audienceOfFile(f) === "ENG").length;
+  return eng > files.length / 2 ? "ENG" : "BUS";
+}
+
+// src/groups/documentation/sdd/spec-standard.ts
+var SPEC_BLOCKS = ["O que a regra faz", "Par\xE2metros", "Contexto", "Refer\xEAncias t\xE9cnicas"];
+var SPEC_BUDGET = {
+  /** Tamanho que a spec deve mirar. */
+  targetLines: 80,
+  /** Acima disso a spec deve ser quebrada em versões menores. */
+  maxLines: 120,
+  /** Arquivos de código por spec de regra (mais que isso, divida o tema). */
+  maxPointers: 4,
+  /** Linhas de código cobertas por uma spec (mais que isso, divida o arquivo por grupos de métodos). */
+  maxCodeLines: 450,
+  /** Linhas de código por parte quando um arquivo grande é dividido. */
+  splitCodeLines: 300,
+  /** Specs por lote de um subagente. */
+  specsPerBatch: 6
+};
+function renderSpecSkeleton(s) {
+  const aud = s.audience ?? "BUS";
+  const lines = [`# ${s.id} \u2014 [${aud}] ${s.title}`, ""];
+  if (s.parent) lines.push(`> Parte de: [${s.parent.id} \u2014 ${s.parent.title}](./${s.parent.file})`, "");
+  lines.push(
+    `## ${SPEC_BLOCKS[0]}`,
+    "",
+    aud === "BUS" ? "<2 a 5 frases com o comportamento ATUAL, em linguagem de produto, como numa documenta\xE7\xE3o para o time de neg\xF3cio: o que acontece com o cliente, o contrato ou a opera\xE7\xE3o, e quando. SEM nomes de classes, m\xE9todos, vari\xE1veis, campos, interfaces ou arquivos; os termos t\xE9cnicos v\xE3o para Par\xE2metros e Contexto.>" : "<2 a 5 frases com o comportamento t\xE9cnico ATUAL: o que o componente faz, de onde l\xEA e para onde escreve, em que condi\xE7\xF5es falha ou tenta de novo. Aqui pode citar tipos e m\xE9todos.>",
+    "",
+    `## ${SPEC_BLOCKS[1]}`,
+    "",
+    '<tabela com limiares, constantes, enums e entradas que mudam o resultado, com o valor atual. Se n\xE3o h\xE1 par\xE2metros, escreva "Sem par\xE2metros:" e diga por qu\xEA.>',
+    "",
+    `## ${SPEC_BLOCKS[2]}`,
+    "",
+    "<por que a regra existe, liga\xE7\xE3o com outras specs (links), fragilidades marcadas com \u26A0\uFE0F Risco e decis\xF5es conhecidas. Se n\xE3o h\xE1 nada, diga o que foi verificado.>",
+    "",
+    "---",
+    "",
+    `## ${SPEC_BLOCKS[3]}`,
+    "",
+    "> Cada linha come\xE7ando com `Arquivo:` \xE9 lida pelo gate de commit. Caminho relativo \xE0 raiz do repo, sem n\xFAmero de linha, uma por linha.",
+    "",
+    ...s.files.map((f) => `Arquivo: ${f}`)
+  );
+  return lines.join("\n");
+}
+var TECH_WORDS = /\b(classes?|interfaces?|m[eé]todos?|vari[aá]veis?|enums?|dtos?|handlers?|reposit[oó]rios?|repositor(?:y|ies)|booleano|null|nulo|exce[cç][aã]o|ass[ií]ncron[ao]s?|s[ií]ncron[ao]s?|endpoints?|payload|json|sql|worker|thread|construtor|propriedades?|atributos?|namespace|inje[cç][aã]o)\b/gi;
+var IDENT = /\b(?:[A-Z][a-z0-9]+){2,}\b|\b[a-z]+(?:[A-Z][a-z0-9]+)+\b|\bI[A-Z][a-z0-9]+(?:[A-Z]\w*)?\b|\b[A-Za-z0-9]+_[A-Za-z0-9_]+\b|\b[A-Za-z]\w*\.(?:cs|ts|js|sql|json|yml|yaml)\b|\b[A-Z]\w+\.[A-Z]\w+\b/g;
+var BRAND = /* @__PURE__ */ new Set(["RabbitMQ", "PostgreSQL", "MongoDB", "JavaScript", "TypeScript", "GitHub", "DataLake", "OpenTelemetry"]);
+function technicalTerms(text) {
+  const found = /* @__PURE__ */ new Set();
+  for (const m of text.matchAll(/`([^`]+)`/g)) found.add(m[1].trim());
+  const plain = text.replace(/`[^`]*`/g, " ");
+  for (const m of plain.matchAll(IDENT)) if (!BRAND.has(m[0])) found.add(m[0]);
+  for (const m of plain.matchAll(TECH_WORDS)) found.add(m[0].toLowerCase());
+  return [...found];
+}
+var norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+function lintSpec(text, budget = SPEC_BUDGET, opts = {}) {
+  const issues = [];
+  const lines = text.split(/\r?\n/);
+  const h2 = [];
+  lines.forEach((l, i) => {
+    const m = /^##\s+(.+?)\s*$/.exec(l);
+    if (m) h2.push({ title: m[1], at: i });
+  });
+  const found = SPEC_BLOCKS.map((b) => h2.findIndex((h) => norm(h.title) === norm(b)));
+  SPEC_BLOCKS.forEach((b, i) => {
+    if (found[i] === -1) issues.push({ level: "error", rule: "blocos", message: `falta o bloco "## ${b}"` });
+  });
+  const present = found.filter((x) => x !== -1);
+  if (present.length > 1 && present.some((x, i) => i > 0 && x < present[i - 1])) {
+    issues.push({ level: "error", rule: "blocos", message: "os blocos n\xE3o est\xE3o na ordem do padr\xE3o" });
+  }
+  SPEC_BLOCKS.forEach((b, i) => {
+    const idx = found[i];
+    if (idx === -1) return;
+    const start = h2[idx].at + 1;
+    const end = h2[idx + 1]?.at ?? lines.length;
+    const body = lines.slice(start, end).filter((l) => l.trim() !== "" && l.trim() !== "---" && (!/^>\s/.test(l.trim()) || /Arquivo:/.test(l)));
+    if (body.length === 0) issues.push({ level: "error", rule: "bloco-vazio", message: `o bloco "${b}" est\xE1 vazio` });
+  });
+  if (opts.audience === "BUS" && found[0] !== -1) {
+    const start = h2[found[0]].at + 1;
+    const end = h2[found[0] + 1]?.at ?? lines.length;
+    const terms = technicalTerms(lines.slice(start, end).join("\n"));
+    if (terms.length) {
+      issues.push({ level: "warn", rule: "linguagem", message: `"O que a regra faz" deve usar linguagem de produto (sem classes, m\xE9todos, vari\xE1veis ou campos); encontrei: ${terms.slice(0, 6).join(", ")}${terms.length > 6 ? `, +${terms.length - 6}` : ""}. Mova os termos t\xE9cnicos para Par\xE2metros ou Contexto` });
+    }
+  }
+  const refIdx = found[3];
+  const refStart = refIdx === -1 ? lines.length : h2[refIdx].at;
+  const pointers = lines.map((l, i) => ({ l, i })).filter(({ l }) => /Arquivo:\s+`?[^\s`]/.test(l));
+  if (refIdx !== -1 && pointers.length === 0) issues.push({ level: "error", rule: "ponteiros", message: "o bloco de refer\xEAncias n\xE3o tem nenhuma linha `Arquivo:` (pr\xE9-requisito do SDD)" });
+  for (const { l, i } of pointers) {
+    if (!/^\s*Arquivo:/.test(l)) issues.push({ level: "warn", rule: "ponteiros", message: `ponteiro na linha ${i + 1} n\xE3o est\xE1 no in\xEDcio da linha (o padr\xE3o \xE9 \`Arquivo: caminho\` sozinho)` });
+    if (i < refStart) issues.push({ level: "warn", rule: "ponteiro-fora-do-bloco", message: `\`Arquivo:\` na linha ${i + 1} est\xE1 fora de "Refer\xEAncias t\xE9cnicas"` });
+    if (/Arquivo:\s+`?\S+?(:\d+|#L\d+)\b/.test(l) || /\blinha\s*~?\d+/i.test(l)) {
+      issues.push({ level: "error", rule: "linha-no-ponteiro", message: `ponteiro com n\xFAmero de linha (linha ${i + 1}): o padr\xE3o \xE9 n\xEDvel de arquivo` });
+    }
+  }
+  if (pointers.length > budget.maxPointers + 2) issues.push({ level: "warn", rule: "ponteiros", message: `${pointers.length} ponteiros: a spec cobre c\xF3digo demais, divida o tema` });
+  const size = lines.filter((l) => l.trim() !== "").length;
+  if (size > budget.maxLines) issues.push({ level: "error", rule: "tamanho", message: `${size} linhas (m\xE1ximo ${budget.maxLines}): quebre em specs menores ligadas entre si` });
+  else if (size > budget.targetLines + 20) issues.push({ level: "warn", rule: "tamanho", message: `${size} linhas (alvo ${budget.targetLines})` });
+  if (/\b(TODO|TBD)\b/.test(text)) issues.push({ level: "error", rule: "pendencia", message: "cont\xE9m marcador TODO/TBD" });
+  return issues;
+}
+var STANDARD_BRIEF = [
+  "- Cada spec tem os 4 blocos, SEMPRE, nesta ordem: `## O que a regra faz`, `## Par\xE2metros`, `## Contexto`, `## Refer\xEAncias t\xE9cnicas`. Nenhum \xE9 omitido; sem nada a dizer, o bloco diz o que foi verificado.",
+  `- Uma regra por documento, curto: alvo de ${SPEC_BUDGET.targetLines} linhas e M\xC1XIMO de ${SPEC_BUDGET.maxLines}. Regra complexa vira v\xE1rias specs ligadas ("> Parte de: [NN \u2014 Tema](./arquivo.md)").`,
+  "- Ponteiros no bloco de refer\xEAncias: uma linha `Arquivo: caminho` por arquivo de c\xF3digo, relativa \xE0 raiz do repo, de um arquivo que EXISTE, n\xEDvel de arquivo, SEM n\xFAmero de linha. S\xF3 nesse bloco.",
+  "- As specs descrevem o comportamento ATUAL (as-is), n\xE3o o ideal; marque fragilidades com `\u26A0\uFE0F Risco`. Portugu\xEAs (BR); identificadores de c\xF3digo no idioma original.",
+  "- Cada spec \xE9 `[BUS]` (regra de neg\xF3cio) ou `[ENG]` (componente t\xE9cnico), marcado no nome do arquivo (`NN.k-BUS-tema.md`, `NN.k-ENG-tema.md`) e no t\xEDtulo (`# NN.k \u2014 [BUS] T\xEDtulo`). A marca\xE7\xE3o vem pronta no nome e no esqueleto; n\xE3o renomeie o arquivo.",
+  "- **[BUS]: `## O que a regra faz` em linguagem de produto**, como numa documenta\xE7\xE3o para o time de neg\xF3cio e produto: descreva o que acontece com o cliente, o contrato ou a opera\xE7\xE3o e em que condi\xE7\xF5es. N\xC3O cite nomes de classes, m\xE9todos, vari\xE1veis, campos, interfaces, enums nem arquivos nesse bloco (nada entre crases); termos t\xE9cnicos entram em `## Par\xE2metros` (nome de neg\xF3cio primeiro, nome t\xE9cnico entre par\xEAnteses) e em `## Contexto`. O t\xEDtulo do `#` pode ser reescrito em linguagem de neg\xF3cio; o nome do arquivo n\xE3o muda.",
+  "- **[ENG]**: linguagem de engenharia, direta; pode citar tipos, m\xE9todos e filas. Se o conte\xFAdo mostrar que a marca\xE7\xE3o do nome est\xE1 errada, escreva a spec mesmo assim e avise na resposta qual deveria trocar.",
+  "- Proibido: TODO/TBD, segredos, credenciais e dados pessoais, inventar comportamento que voc\xEA n\xE3o leu no c\xF3digo ou no documento-fonte."
+].join("\n");
+
+// src/groups/documentation/sdd/discovery/lint.ts
+function lintSpecs(ctx, specsDir = "docs/specs") {
+  const prefix = specsDir.replace(/\/+$/, "") + "/";
+  const files = new Set(ctx.files);
+  return ctx.files.filter((f) => f.startsWith(prefix) && /\.md$/i.test(f) && !/(^|\/)(readme|index)\.md$/i.test(f) && !f.includes("/.impact-reports/")).map((rel) => {
+    const text = ctx.readText(rel) ?? "";
+    const tagged = audienceFromName(rel);
+    const pointed = [...text.matchAll(/Arquivo:\s+`?([^`\s]+)/g)].map((m) => m[1]);
+    const issues = lintSpec(text, void 0, { audience: tagged ?? audienceOfFiles(pointed) });
+    if (!tagged) issues.push({ level: "warn", rule: "marcacao", message: "o nome do arquivo n\xE3o traz a marca\xE7\xE3o BUS (regra de neg\xF3cio) ou ENG (componente t\xE9cnico), ex.: 03.25-BUS-tema.md" });
+    const missingPointers = [...text.matchAll(/Arquivo:\s+`?([^`\s]+)/g)].map((m) => m[1].replace(/[.,;)]+$/, "")).filter((p) => !files.has(p) && !ctx.files.some((f) => f.endsWith("/" + p)));
+    for (const p of missingPointers) issues.push({ level: "error", rule: "ponteiros", message: `ponteiro para arquivo que n\xE3o existe: ${p}` });
+    return { path: rel, lines: text.split("\n").filter((l) => l.trim() !== "").length, issues, missingPointers };
+  }).sort((a, b) => a.path.localeCompare(b.path));
+}
+function formatLint(results) {
+  if (results.length === 0) return "Nenhuma spec encontrada em docs/specs (o SDD est\xE1 ausente).";
+  const bad = results.filter((r) => r.issues.some((i) => i.level === "error"));
+  const warn = results.filter((r) => !bad.includes(r) && r.issues.length > 0);
+  const L = [`Padr\xE3o das specs: ${results.length - bad.length - warn.length} conformes \xB7 ${warn.length} com avisos \xB7 ${bad.length} com erros (de ${results.length})`];
+  for (const r of [...bad, ...warn].slice(0, 40)) {
+    L.push(`  ${bad.includes(r) ? "\u2715" : "!"} ${r.path} (${r.lines} linhas)`);
+    for (const i of r.issues.slice(0, 4)) L.push(`      ${i.level === "error" ? "erro " : "aviso"} [${i.rule}] ${i.message}`);
+  }
+  if (bad.length + warn.length > 40) L.push(`  \u2026 e mais ${bad.length + warn.length - 40} specs`);
+  return L.join("\n");
+}
+
 // src/groups/documentation/panels.ts
 var SDD_HOOK_FILES = [".githooks/pre-commit", ".githooks/sdd-analyze", ".githooks/post-commit", ".githooks/pre-push", ".claude/hooks/spec-change-guard.sh"];
 function sddHealth(ctx) {
@@ -21162,6 +21419,16 @@ function sddHealth(ctx) {
     items.push(
       specs.length === 0 ? { label: "Specs", status: "fail", detail: `${m.manifest.specsDir}/ sem documentos` } : { label: "Specs", status: idx.fileSet.has(`${dir}README.md`) ? "ok" : "warn", detail: `${specs.length} documentos${idx.fileSet.has(`${dir}README.md`) ? ", com \xEDndice" : ", sem README.md de \xEDndice"}` }
     );
+    const lint = lintSpecs(ctx, m.manifest.specsDir);
+    if (lint.length > 0) {
+      const errors = lint.filter((r) => r.issues.some((i) => i.level === "error")).length;
+      const warns = lint.filter((r) => r.issues.length > 0 && !r.issues.some((i) => i.level === "error")).length;
+      items.push({
+        label: "Padr\xE3o das specs",
+        status: errors > 0 ? "fail" : warns > 0 ? "warn" : "ok",
+        detail: `${lint.length - errors - warns} de ${lint.length} conformes (4 blocos, at\xE9 120 linhas, ponteiros v\xE1lidos)${errors || warns ? `; ${errors} com erro, ${warns} com aviso: repo-score sdd lint` : ""}`
+      });
+    }
     let total = 0;
     let broken = 0;
     for (const d of specs) for (const r of idx.refs.get(d.rel) ?? []) total += 1, r.resolved === null && (broken += 1);
@@ -21207,6 +21474,306 @@ function documentationPanels(ctx) {
   return [{ group: "documentation", title: "SDD: sa\xFAde", items: sddHealth(ctx).items }];
 }
 
+// src/groups/documentation/sdd/discovery/plan.ts
+import path14 from "node:path";
+
+// src/groups/documentation/sdd/discovery/inventory.ts
+import path12 from "node:path";
+var CONVENTION = /^(readme|contributing|contributors|owners|changelog|license|code_of_conduct|security|pull_request_template|skill|claude|agents)(\.|$)/i;
+var RULE_WORDS = /\b(regras?|rules?|deve|devem|n[aã]o pode|nunca|sempre|obrigat[oó]ri\w+|threshold|limite|prazo|valida[cç]\w+|condi[cç][aã]o|c[aá]lculo|calcula\w*|f[oó]rmula|taxa|percentual|juros|provis\w+|vencid\w+|atraso|saldo|parcela\w*|apropria\w+|valor presente|perda|risco)\b/gi;
+var IF_THEN = /\bse\b[^.\n]{0,60}\bent[aã]o\b/gi;
+var FLOW = /```\s*(mermaid|flowchart)|flowchart\s+(TD|LR)|graph\s+(TD|LR)/gi;
+var FORMULA = /^\s*[A-Za-zÀ-ÿ_]+[ᵢ\w]*\s*=\s*.+[\/*+\-^].+$/gm;
+function classifyDoc(rel, text) {
+  const chars = Math.max(text.length, 1);
+  const matches = (text.match(RULE_WORDS)?.length ?? 0) + (text.match(IF_THEN)?.length ?? 0) * 2 + (text.match(FLOW)?.length ?? 0) * 4 + (text.match(FORMULA)?.length ?? 0) * 2;
+  const density = Math.round(matches / chars * 1e4) / 10;
+  const base = basename(rel);
+  const lower = `${rel}
+${text.slice(0, 600)}`.toLowerCase();
+  const kind = /fluxograma|flowchart|mermaid/.test(lower) ? "fluxo" : /an[aá]lise/.test(lower) ? "an\xE1lise" : /plano|migra[cç]/.test(lower) ? "plano" : /readme|guia|implementation|instal|telemetry|opentelemetry|how/.test(lower) ? "guia" : "outro";
+  const signal = density >= 12 ? "alto" : density >= 6 ? "m\xE9dio" : "baixo";
+  const lines = text.split(/\r?\n/).length;
+  const tokens2 = Math.round(chars / 4);
+  if (CONVENTION.test(base)) return { path: rel, lines, tokens: tokens2, density, signal: "baixo", kind: "guia", convertible: false, reason: "documento de conven\xE7\xE3o (README, CONTRIBUTING\u2026)" };
+  if (kind === "guia") return { path: rel, lines, tokens: tokens2, density, signal, kind, convertible: false, reason: "guia t\xE9cnico/operacional, n\xE3o descreve regra de neg\xF3cio" };
+  if (signal === "baixo") return { path: rel, lines, tokens: tokens2, density, signal, kind, convertible: false, reason: "pouco vocabul\xE1rio de regra de neg\xF3cio" };
+  return { path: rel, lines, tokens: tokens2, density, signal, kind, convertible: true, reason: `${signal === "alto" ? "muito" : "algum"} vocabul\xE1rio de regra (${density}/10 mil caracteres)${kind === "fluxo" ? ", fluxo de processo" : ""}` };
+}
+function inventoryDocs(ctx) {
+  const idx = getDocIndex(ctx);
+  return idx.docs.filter((d) => !/^docs\/specs\//.test(d.rel) && !/(^|\/)\.claude\/|(^|\/)\.github\/skills\//.test(d.rel)).map((d) => classifyDoc(d.rel, d.text)).sort((a, b) => Number(b.convertible) - Number(a.convertible) || b.density - a.density);
+}
+var docApp = (rel) => /^apps\/[^/]+/.exec(rel)?.[0] ?? null;
+var slug = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+var stem = (rel) => path12.posix.basename(rel).replace(/\.[^.]+$/, "");
+
+// src/groups/documentation/sdd/discovery/rules.ts
+import path13 from "node:path";
+function discoverRuleFiles(ctx, scope = null) {
+  const prefix = scope ? `${scope}/` : "";
+  let skippedPlumbing = 0;
+  let skippedLow = 0;
+  const rules = [];
+  for (const f of ctx.files) {
+    if (!f.startsWith(prefix) || !isRuleCandidate(f)) continue;
+    const text = ctx.readText(f);
+    if (text === null) continue;
+    const v = classifyRuleFile(f, text);
+    if (v.rule) rules.push(v.file);
+    else if (v.why === "infraestrutura" || v.why === "gerado") skippedPlumbing += 1;
+    else if (v.why === "baixa-densidade") skippedLow += 1;
+  }
+  return { rules: rules.sort((a, b) => b.density - a.density), skippedPlumbing, skippedLow };
+}
+function discoverGlossaryFiles(ctx) {
+  return ctx.files.filter((f) => /(^|\/)(Enums?|Constants?)\//i.test(f) && /\.(cs|java|kt|ts|go)$/.test(f) && !isTestLike(f)).sort((a, b) => (ctx.readText(b)?.length ?? 0) - (ctx.readText(a)?.length ?? 0));
+}
+function symbolIndex(ctx) {
+  const index = /* @__PURE__ */ new Map();
+  const add = (sym, f) => index.set(sym, (index.get(sym) ?? /* @__PURE__ */ new Set()).add(f));
+  for (const f of ctx.files) {
+    if (!isRuleCandidate(f)) continue;
+    const text = ctx.readText(f);
+    if (text === null) continue;
+    add(path13.posix.basename(f).replace(/\.[^.]+$/, ""), f);
+    for (const m of text.matchAll(/\b(?:class|interface|record|struct|enum)\s+(\w{5,})/g)) add(m[1], f);
+    for (const n2 of methodsOf(text)) if (n2.length >= 6) add(n2, f);
+  }
+  return new Map([...index].map(([k, v]) => [k, [...v]]));
+}
+
+// src/groups/documentation/sdd/discovery/plan.ts
+var DOC_SPLIT_TOKENS = 1500;
+var pad = (n2) => String(n2).padStart(2, "0");
+var human = (s) => s.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[._-]+/g, " ").trim();
+function splitFile(f) {
+  const k = Math.ceil(f.lines / SPEC_BUDGET.splitCodeLines);
+  const per = Math.ceil(Math.max(f.methods.length, 1) / k);
+  return Array.from({ length: k }, (_, i) => {
+    const chunk2 = f.methods.slice(i * per, (i + 1) * per);
+    return { subtopic: `parte ${i + 1} de ${k}${chunk2.length ? `: ${chunk2.slice(0, 5).join(", ")}${chunk2.length > 5 ? "\u2026" : ""}` : ""}`, lines: Math.round(f.lines / k) };
+  });
+}
+function splitDoc(text, tokens2) {
+  const k = Math.max(2, Math.ceil(tokens2 / 1200));
+  const headings = [...text.matchAll(/^#{2,3}\s+(.+?)\s*$/gm)].map((m) => m[1].replace(/^\d+(\.\d+)*\.?\s*/, ""));
+  const per = Math.ceil(headings.length / k);
+  return Array.from({ length: k }, (_, i) => {
+    const chunk2 = headings.slice(i * per, (i + 1) * per);
+    return { subtopic: chunk2.length ? `se\xE7\xF5es: ${chunk2.slice(0, 4).join("; ")}${chunk2.length > 4 ? "\u2026" : ""}` : `parte ${i + 1} de ${k}`, tokens: Math.round(tokens2 / k) };
+  });
+}
+function themeKey(rel, appDir) {
+  const parts = (appDir ? rel.slice(appDir.length + 1) : rel).split("/");
+  return [parts[0], ...parts.slice(1, -1).slice(0, 2)].filter(Boolean).join("/");
+}
+function docPointers(text, index, ruleFiles2) {
+  const ids = /* @__PURE__ */ new Set();
+  for (const m of text.matchAll(/`([A-Za-z_][\w.]{5,})`/g)) ids.add(m[1].split(".").pop());
+  for (const m of text.matchAll(/\b([A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+){1,})\b/g)) ids.add(m[1]);
+  const score2 = /* @__PURE__ */ new Map();
+  for (const id of ids) for (const f of index.get(id) ?? []) score2.set(f, (score2.get(f) ?? 0) + (ruleFiles2.has(f) ? 2 : 1));
+  return [...score2].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([f]) => f);
+}
+function perimeterGlobs(files, limit = 20) {
+  const dirs = [...new Set(files.map(dirname))].filter((d) => d !== "");
+  const minimal = dirs.filter((d) => !dirs.some((o) => o !== d && d.startsWith(o + "/")));
+  return minimal.sort().slice(0, limit).map((d) => `${d}/*`);
+}
+function buildSpecPlan(ctx, opts = {}) {
+  const specsDir = opts.specsDir ?? "docs/specs";
+  const maxSpecs = opts.maxSpecs ?? 60;
+  const { apps } = detectApps(ctx);
+  const docs = inventoryDocs(ctx);
+  const index = symbolIndex(ctx);
+  const specs = [];
+  const stats = { ruleFiles: 0, plumbingSkipped: 0, lowSkipped: 0, docsFound: docs.length, docsConvertible: docs.filter((d) => d.convertible).length };
+  const appSummary = [];
+  const allRuleFiles = /* @__PURE__ */ new Set();
+  const fileName = (id, audience, title) => `${id}-${audience}-${slug(title)}.md`;
+  const newSpec = (s) => ({
+    audience: audienceOfFiles(s.pointers),
+    app: null,
+    parent: null,
+    sourceDocs: [],
+    subtopic: null,
+    codeLines: 0,
+    codeChars: 0,
+    docTokens: 0,
+    weight: 0,
+    notes: [],
+    ...s,
+    file: fileName(s.id, s.audience ?? audienceOfFiles(s.pointers), s.title)
+  });
+  let appNo = 2;
+  for (const app of apps) {
+    const found = discoverRuleFiles(ctx, app.dir || null);
+    stats.ruleFiles += found.rules.length;
+    stats.plumbingSkipped += found.skippedPlumbing;
+    stats.lowSkipped += found.skippedLow;
+    found.rules.forEach((r) => allRuleFiles.add(r.path));
+    if (found.rules.length === 0) {
+      appSummary.push({ dir: app.dir, name: app.name, ruleFiles: 0, planned: 0 });
+      continue;
+    }
+    const id = pad(appNo++);
+    const orchestration = newSpec({
+      id,
+      title: `Vis\xE3o do app ${app.name}`,
+      kind: "orquestracao",
+      audience: "BUS",
+      app: app.dir,
+      pointers: found.rules.slice(0, 2).map((r) => r.path),
+      weight: found.rules.slice(0, 2).reduce((s, r) => s + r.density, 0)
+    });
+    specs.push(orchestration);
+    const themes = /* @__PURE__ */ new Map();
+    for (const r of found.rules) {
+      const key = `${audienceOfFile(r.path)}|${themeKey(r.path, app.dir)}`;
+      themes.set(key, [...themes.get(key) ?? [], r]);
+    }
+    let k = 1;
+    const sub = (title, files, subtopic, lines) => {
+      const s = newSpec({
+        id: `${id}.${k++}`,
+        title,
+        kind: "regra",
+        app: app.dir,
+        parent: id,
+        pointers: files.map((f) => f.path),
+        subtopic,
+        codeLines: lines,
+        codeChars: files.reduce((n2, f) => n2 + f.chars, 0) / (subtopic ? Math.max(1, Number(/de (\d+)/.exec(subtopic)?.[1] ?? 1)) : 1),
+        weight: files.reduce((n2, f) => n2 + f.density, 0)
+      });
+      specs.push(s);
+    };
+    for (const [key, files] of [...themes].sort((a, b) => a[0].localeCompare(b[0]))) {
+      const theme = key.slice(key.indexOf("|") + 1);
+      const label = human(theme.split("/").slice(-1)[0] ?? theme);
+      let cur = [];
+      let curLines = 0;
+      const flush = () => {
+        if (cur.length === 0) return;
+        const names = cur.map((f) => human(stem(f.path)));
+        sub(cur.length === 1 ? names[0] : `${names[0]} e correlatos (${cur.length} arquivos de ${label})`, cur, null, curLines);
+        cur = [];
+        curLines = 0;
+      };
+      for (const f of files) {
+        if (f.lines > SPEC_BUDGET.maxCodeLines) {
+          flush();
+          for (const part of splitFile(f)) sub(`${human(stem(f.path))} \u2014 ${part.subtopic}`, [f], part.subtopic, part.lines);
+        } else {
+          if (cur.length >= SPEC_BUDGET.maxPointers - 1 || curLines + f.lines > SPEC_BUDGET.maxCodeLines) flush();
+          cur.push(f);
+          curLines += f.lines;
+        }
+      }
+      flush();
+    }
+    appSummary.push({ dir: app.dir, name: app.name, ruleFiles: found.rules.length, planned: k - 1 });
+  }
+  const docSpecs = /* @__PURE__ */ new Map();
+  const docRowsBase = [];
+  for (const d of docs) {
+    const row = { path: d.path, convertible: d.convertible, reason: d.reason, tokens: d.tokens, signal: d.signal };
+    docRowsBase.push(row);
+    if (!d.convertible) continue;
+    const text = ctx.readText(d.path) ?? "";
+    const pointers = docPointers(text, index, allRuleFiles);
+    const small = d.tokens <= DOC_SPLIT_TOKENS;
+    const target = small ? specs.find((s) => s.kind === "regra" && s.sourceDocs.length === 0 && s.pointers.some((p) => pointers.includes(p))) : void 0;
+    if (target) {
+      target.sourceDocs.push(d.path);
+      target.docTokens += d.tokens;
+      target.notes.push(`converte ${path14.posix.basename(d.path)} (fonte j\xE1 escrita: menos c\xF3digo a ler)`);
+      docSpecs.set(d.path, [target]);
+      continue;
+    }
+    const appOf = docApp(d.path);
+    const parent = specs.find((s) => s.kind === "orquestracao" && s.app === appOf);
+    const parts = small ? [{ subtopic: null, tokens: d.tokens }] : splitDoc(text, d.tokens);
+    const pointerChars = pointers.reduce((n2, p) => n2 + (ctx.readText(p)?.length ?? 0), 0);
+    const base = human(stem(d.path)).toLowerCase().replace(/^./, (c) => c.toUpperCase());
+    const made = parts.map((part, i) => {
+      const spec = newSpec({
+        id: parent ? `${parent.id}.tmp${specs.length}` : pad(appNo++),
+        title: parts.length > 1 ? `${base} \u2014 parte ${i + 1} de ${parts.length}` : base,
+        kind: "convertida",
+        audience: pointers.length ? audienceOfFiles(pointers) : "BUS",
+        app: appOf,
+        parent: parent?.id ?? null,
+        pointers,
+        sourceDocs: [d.path],
+        subtopic: part.subtopic,
+        docTokens: part.tokens,
+        codeChars: pointerChars / parts.length,
+        weight: d.density * 3
+      });
+      if (pointers.length === 0) spec.notes.push("nenhum identificador do documento foi achado no c\xF3digo: os ponteiros precisam ser definidos na convers\xE3o (obrigat\xF3rio)");
+      specs.push(spec);
+      return spec;
+    });
+    docSpecs.set(d.path, made);
+  }
+  for (const o of specs.filter((s) => s.kind === "orquestracao")) {
+    let n2 = specs.filter((s) => s.parent === o.id && s.kind === "regra").length;
+    for (const s of specs.filter((x) => x.parent === o.id && x.kind === "convertida")) {
+      s.id = `${o.id}.${++n2}`;
+      s.file = fileName(s.id, s.audience, s.title);
+    }
+  }
+  const docRows = docRowsBase.map((r) => {
+    const made = docSpecs.get(r.path);
+    return { ...r, destination: made ? made.length > 1 ? `${made[0].id} a ${made[made.length - 1].id}` : made[0].id : null };
+  });
+  const glossary = discoverGlossaryFiles(ctx).slice(0, 4);
+  const head = [
+    newSpec({ id: "00", title: "Vis\xE3o geral", kind: "visao-geral", audience: "BUS", pointers: ctx.files.includes("apps.yml") ? ["apps.yml"] : ctx.files.includes("README.md") ? ["README.md"] : [], weight: 1e3 })
+  ];
+  if (glossary.length) head.push(newSpec({ id: "01", title: "Gloss\xE1rio e invariantes", kind: "glossario", audience: "BUS", pointers: glossary, codeChars: glossary.reduce((n2, f) => n2 + (ctx.readText(f)?.length ?? 0), 0), weight: 900 }));
+  let all = [...head, ...specs];
+  const deferred = [];
+  if (all.length > maxSpecs) {
+    const keep = new Set(all.filter((s) => s.kind === "visao-geral" || s.kind === "glossario" || s.kind === "orquestracao").map((s) => s.id));
+    const rest = all.filter((s) => !keep.has(s.id)).sort((a, b) => b.weight - a.weight);
+    rest.slice(0, Math.max(0, maxSpecs - keep.size)).forEach((s) => keep.add(s.id));
+    for (const s of all) if (!keep.has(s.id)) deferred.push({ id: s.id, title: s.title, reason: `fora do or\xE7amento de ${maxSpecs} specs desta rodada (menor densidade de regra)` });
+    all = all.filter((s) => keep.has(s.id));
+  }
+  const codePointers = all.filter((s) => ["regra", "orquestracao", "convertida"].includes(s.kind)).flatMap((s) => s.pointers).filter(isRuleCandidate);
+  return { specsDir, specs: all, deferred, docs: docRows, globs: perimeterGlobs([.../* @__PURE__ */ new Set([...codePointers, ...glossary])]), apps: appSummary, stats };
+}
+function plannedSiblings(ctx, plan2) {
+  const res = plan2.globs.map(pathspecToRegex);
+  const planned = new Set(plan2.specs.flatMap((s) => s.pointers).filter(isRuleCandidate));
+  const linked = [];
+  const siblings = [];
+  for (const f of ctx.files) {
+    if (!isRuleCandidate(f) || !res.some((re) => re.test(f))) continue;
+    if (planned.has(f)) {
+      linked.push(f);
+      continue;
+    }
+    const text = ctx.readText(f);
+    if (text !== null && classifyRuleFile(f, text).rule) siblings.push(f);
+  }
+  return { linked, siblings };
+}
+var planCache = /* @__PURE__ */ new WeakMap();
+function buildSpecPlanCached(ctx, opts = {}) {
+  const key = `${opts.specsDir ?? "docs/specs"}|${opts.maxSpecs ?? ""}`;
+  const byCtx = planCache.get(ctx) ?? /* @__PURE__ */ new Map();
+  planCache.set(ctx, byCtx);
+  const hit = byCtx.get(key);
+  if (hit) return hit;
+  const plan2 = buildSpecPlan(ctx, opts);
+  byCtx.set(key, plan2);
+  return plan2;
+}
+
 // src/groups/documentation/sdd/estimate.ts
 var CODE_EXT2 = /\.(cs|fs|go|kt|java|scala|ts|tsx|js|py|rb|php|rs|sql)$/i;
 function estimateDiscoveryTokens(ctx, ruleGlobs2) {
@@ -21235,8 +21802,158 @@ function estimateGapTokens(ctx, files) {
   };
 }
 
+// src/groups/documentation/sdd/discovery/tokens.ts
+var TOKEN_MODEL = {
+  coldStartPerBatch: 4e4,
+  readFactor: 2.2,
+  writePerSpec: 2400,
+  docFactor: 1.3,
+  overviewAndIndex: 15e3,
+  skillFill: 12e3,
+  verification: 1e4,
+  rangeLow: 0.7,
+  rangeHigh: 1.6,
+  parallelBatches: 3,
+  minutesPerBatch: 4.5
+};
+var round2 = (n2) => Math.round(n2 / 1e3) * 1e3;
+function specTokens(s) {
+  const read = s.codeChars / 3.5 * TOKEN_MODEL.readFactor + s.docTokens * TOKEN_MODEL.docFactor;
+  return Math.round(read + TOKEN_MODEL.writePerSpec);
+}
+function forecastTokens(plan2, opts = {}) {
+  const perSpec = {};
+  for (const s of plan2.specs) perSpec[s.id] = specTokens(s);
+  const writable = plan2.specs.filter((s) => s.kind !== "visao-geral" && s.kind !== "glossario");
+  const batches = Math.max(1, Math.ceil(writable.length / SPEC_BUDGET.specsPerBatch));
+  const specsTotal = Object.values(perSpec).reduce((a, b) => a + b, 0);
+  const cold = batches * TOKEN_MODEL.coldStartPerBatch;
+  const breakdown = [
+    { item: `Leitura do c\xF3digo e escrita de ${plan2.specs.length} specs`, tokens: specsTotal },
+    { item: `Partida fria de ${batches} lote(s) de subagente (padr\xE3o, \xEDndice, exemplos)`, tokens: cold },
+    { item: "Vis\xE3o geral, gloss\xE1rio e \xEDndice", tokens: TOKEN_MODEL.overviewAndIndex },
+    ...opts.skillFill === false ? [] : [{ item: "Preencher a skill de dom\xEDnio", tokens: TOKEN_MODEL.skillFill }],
+    { item: "Verifica\xE7\xE3o (lint, ponteiros, nota)", tokens: TOKEN_MODEL.verification }
+  ];
+  const mid = breakdown.reduce((a, b) => a + b.tokens, 0);
+  return {
+    low: round2(mid * TOKEN_MODEL.rangeLow),
+    mid: round2(mid),
+    high: round2(mid * TOKEN_MODEL.rangeHigh),
+    batches,
+    minutes: Math.ceil(batches / TOKEN_MODEL.parallelBatches) * TOKEN_MODEL.minutesPerBatch,
+    breakdown,
+    perSpec,
+    basis: "calibrado em 1 execu\xE7\xE3o real (previsto 96\u2013295 mil, realizado \u2248 460 mil); a faixa alta cobre o desvio observado"
+  };
+}
+
+// src/groups/documentation/sdd/tasks.ts
+var chunk = (list, size) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
+var fence = (s) => "```markdown\n" + s + "\n```";
+function specBrief(spec, plan2, n2) {
+  const parent = spec.parent ? plan2.specs.find((s) => s.id === spec.parent) : void 0;
+  const children = plan2.specs.filter((s) => s.parent === spec.id);
+  const L = [`### ${n2}. \`${plan2.specsDir}/${spec.file}\` (${spec.kind}) \xB7 **[${spec.audience}] ${AUDIENCE_LABEL[spec.audience]}**`, `T\xEDtulo: ${spec.title}${spec.audience === "BUS" ? " (reescreva em linguagem de neg\xF3cio, sem nomes de c\xF3digo; o nome do arquivo n\xE3o muda)" : ""}`];
+  if (parent) L.push(`Spec-m\xE3e: ${parent.id} \u2014 ${parent.title} (\`${parent.file}\`)`);
+  if (spec.subtopic) L.push(`Recorte desta spec: ${spec.subtopic}. Documente S\xD3 esse recorte; o resto \xE9 de outra spec.`);
+  L.push("Arquivos de c\xF3digo (viram os ponteiros `Arquivo:`):", ...spec.pointers.map((p) => `- \`${p}\``));
+  if (spec.sourceDocs.length) L.push("Documentos existentes a CONVERTER (a regra j\xE1 est\xE1 descrita ali; confirme no c\xF3digo e reescreva no padr\xE3o):", ...spec.sourceDocs.map((d) => `- \`${d}\``));
+  if (spec.kind === "orquestracao") {
+    L.push(`Esta \xE9 a vis\xE3o do fluxo do app: curta, sem duplicar as sub-specs. No bloco Contexto liste as sub-specs com link: ${children.map((c) => `\`${c.file}\``).join(", ") || "(nenhuma)"}.`);
+  }
+  for (const note of spec.notes.filter((x) => x.startsWith("nenhum"))) L.push(`\u26A0\uFE0F ${note}`);
+  L.push("Esqueleto (preencha o que est\xE1 entre < >):", fence(renderSpecSkeleton({ id: spec.id, title: spec.title, ...parent ? { parent: { id: parent.id, title: parent.title, file: parent.file } } : {}, files: spec.pointers, audience: spec.audience })));
+  return L.join("\n");
+}
+var COMMON_RULES = (specsDir) => [
+  "## Como trabalhar",
+  "",
+  "1. Leia por completo cada arquivo de c\xF3digo listado (e s\xF3 o necess\xE1rio ao redor) e os documentos-fonte; descreva o que o c\xF3digo FAZ hoje.",
+  `2. Escreva SOMENTE os arquivos deste lote, em \`${specsDir}/\`. N\xE3o altere c\xF3digo, testes, o \xEDndice (\`README.md\`) nem outras specs.`,
+  "3. Antes de terminar, confira voc\xEA mesmo: os 4 blocos presentes e na ordem; no m\xE1ximo " + SPEC_BUDGET.maxLines + ' linhas por arquivo; cada `Arquivo:` aponta para um arquivo que existe (use `ls`); nenhum n\xFAmero de linha; sem TODO/TBD; nas specs [BUS], o bloco "O que a regra faz" sem nenhum nome de classe, m\xE9todo, vari\xE1vel, campo ou arquivo (e nada entre crases).',
+  "4. Se uma spec ficar acima do limite, divida em duas specs ligadas e avise na resposta (o orquestrador ajusta o \xEDndice).",
+  "5. Responda com a lista dos arquivos criados e, para cada um, o n\xFAmero de linhas e qualquer ponteiro que n\xE3o conseguiu confirmar."
+].join("\n");
+function adoptionTasks(manifest, plan2) {
+  const writable = plan2.specs.filter((s) => s.kind !== "visao-geral" && s.kind !== "glossario");
+  const batches = chunk(writable, SPEC_BUDGET.specsPerBatch);
+  const header = (n2, total) => `Lote ${n2} de ${total}: escrever ${batches[n2 - 1].length} specs de SDD de ${manifest.projectName || "este reposit\xF3rio"}, em portugu\xEAs (BR), em \`${plan2.specsDir}/\`.`;
+  const tasks = batches.map((specs, i) => ({
+    id: `sdd-specs:${i + 1}`,
+    title: `Specs, lote ${i + 1} de ${batches.length}: ${specs.map((s) => s.id).join(", ")}`,
+    targets: specs.map((s) => `${plan2.specsDir}/${s.file}`),
+    instructions: [header(i + 1, batches.length), "", "## Padr\xE3o (obrigat\xF3rio)", "", STANDARD_BRIEF, "", "## Specs deste lote", "", ...specs.map((s, k) => specBrief(s, plan2, k + 1) + "\n"), COMMON_RULES(plan2.specsDir)].join("\n")
+  }));
+  const head = plan2.specs.filter((s) => s.kind === "visao-geral" || s.kind === "glossario");
+  const all = plan2.specs.map((s) => `- ${s.id} \u2014 [${s.audience}] ${s.title} (\`${s.file}\`)`);
+  tasks.push({
+    id: "sdd-overview",
+    title: `Vis\xE3o geral, gloss\xE1rio e \xEDndice (${head.length + 1} arquivos)`,
+    targets: [...head.map((s) => `${plan2.specsDir}/${s.file}`), `${plan2.specsDir}/README.md`],
+    instructions: [
+      `Depois que TODOS os lotes terminarem, escreva em \`${plan2.specsDir}/\`: ${head.map((s) => `\`${s.file}\``).join(", ")} e o \xEDndice \`README.md\` (substitui o rascunho existente).`,
+      "",
+      "## Padr\xE3o (obrigat\xF3rio para a vis\xE3o geral e o gloss\xE1rio)",
+      "",
+      STANDARD_BRIEF,
+      "",
+      ...head.map((s, k) => specBrief(s, plan2, k + 1) + "\n"),
+      "## \xCDndice (`README.md`)",
+      "",
+      'Duas tabelas `| # | Documento | T\xF3pico |`: primeiro **Regras de neg\xF3cio [BUS]** (as specs BUS, para o time de neg\xF3cio e produto), depois **Componentes t\xE9cnicos [ENG]**. UMA linha por spec abaixo, na ordem, com link `[T\xEDtulo](./arquivo.md)` e um t\xF3pico de uma frase tirado do bloco "O que a regra faz" de cada spec j\xE1 escrita (em linguagem de neg\xF3cio nas BUS). A tabela BUS deve ser leg\xEDvel por quem n\xE3o programa. Depois da tabela, a se\xE7\xE3o "Como ler / manter": ciclo SDD (spec \u2192 c\xF3digo \u2192 testes \u2192 conflitos) e a conven\xE7\xE3o `Arquivo: caminho` (n\xEDvel de arquivo, sem linha).',
+      ...all,
+      "",
+      "Confira que todo link do \xEDndice aponta para um arquivo que existe e que nenhuma spec ficou fora dele."
+    ].join("\n")
+  });
+  return tasks;
+}
+function migrationTasks(manifest, results) {
+  const legacy = results.filter((r) => r.issues.length > 0).sort((a, b) => b.lines - a.lines);
+  return chunk(legacy, SPEC_BUDGET.specsPerBatch).map((batch, i, all) => ({
+    id: `sdd-migrate:${i + 1}`,
+    title: `Migrar specs para o padr\xE3o, lote ${i + 1} de ${all.length} (${batch.length} specs)`,
+    targets: [`${manifest.specsDir}/`],
+    instructions: [
+      `Migrar ${batch.length} specs legadas de ${manifest.projectName || "este reposit\xF3rio"} para o padr\xE3o, em \`${manifest.specsDir}/\`. Lote ${i + 1} de ${all.length}.`,
+      "",
+      "## Padr\xE3o (obrigat\xF3rio)",
+      "",
+      STANDARD_BRIEF,
+      "",
+      "## Specs deste lote (o que o verificador apontou)",
+      "",
+      ...batch.map((r) => [`### \`${r.path}\` (${r.lines} linhas)`, ...r.issues.map((x) => `- ${x.level === "error" ? "erro" : "aviso"}: ${x.message}`), r.lines > SPEC_BUDGET.maxLines ? `- Acima do limite: o arquivo original vira a spec de orquestra\xE7\xE3o curta, com links, e o conte\xFAdo detalhado passa para sub-specs \`NN.k-tema.md\` (cada uma at\xE9 ${SPEC_BUDGET.maxLines} linhas, com "Parte de" apontando para a original).` : "", ""].filter(Boolean).join("\n")),
+      "## Como trabalhar",
+      "",
+      "1. Leia a spec por completo e reescreva no padr\xE3o SEM perder regra, valor, tabela, risco (`\u26A0\uFE0F Risco`) nem cita\xE7\xE3o: o que n\xE3o cabe em um bloco vai para o bloco certo (par\xE2metros \u2192 Par\xE2metros; motivo e intera\xE7\xF5es \u2192 Contexto).",
+      '2. Todas as cita\xE7\xF5es `Arquivo:` v\xE3o para o bloco "Refer\xEAncias t\xE9cnicas", uma por linha, no in\xEDcio da linha, sem n\xFAmero de linha. Confira com `ls` que cada caminho existe; se um n\xE3o existe, corrija para o arquivo atual ou registre no Contexto que foi removido.',
+      "3. Mantenha a numera\xE7\xE3o e os links que outras specs usam. **Marca\xE7\xE3o no nome:** se o arquivo n\xE3o tem `-BUS-` ou `-ENG-` depois do n\xFAmero (`03.25-BUS-tema.md`), renomeie com `git mv` (BUS = regra de neg\xF3cio; ENG = componente t\xE9cnico: leitura de arquivos, consultas, workers, integra\xE7\xF5es), ponha `[BUS]`/`[ENG]` no t\xEDtulo (`# 03.25 \u2014 [BUS] T\xEDtulo`) e atualize TODOS os links para o arquivo em `" + manifest.specsDir + "/` (inclusive o \xEDndice). Se criar sub-specs, liste-as na spec original (Contexto) e informe os novos arquivos para o \xEDndice.",
+      "   **Linguagem [BUS]:** `## O que a regra faz` em linguagem de produto, sem nomes de classes, m\xE9todos, vari\xE1veis, campos ou arquivos (nada entre crases); o aviso `linguagem` do verificador lista os termos a tirar. O detalhe t\xE9cnico vai para Par\xE2metros e Contexto, sem perder nada.",
+      "4. Descreva o comportamento ATUAL; n\xE3o invente regra nova. Sem TODO/TBD.",
+      "5. Altere somente as specs deste lote (e as sub-specs que criar). Responda com os arquivos alterados/criados, linhas de cada um e pend\xEAncias."
+    ].join("\n")
+  }));
+}
+function estimateAdoption(plan2) {
+  const f = forecastTokens(plan2);
+  return { low: f.low, high: f.high, basis: `${plan2.specs.length} specs em ${f.batches} lote(s); ${f.basis}` };
+}
+function estimateMigration(ctx, results) {
+  const legacy = results.filter((r) => r.issues.length > 0);
+  const batches = Math.max(1, Math.ceil(legacy.length / SPEC_BUDGET.specsPerBatch));
+  const body = legacy.reduce((n2, r) => {
+    const chars = ctx.readText(r.path)?.length ?? 0;
+    const parts = Math.max(1, Math.ceil(r.lines / SPEC_BUDGET.targetLines));
+    return n2 + chars / 3.5 * 1.3 + chars / 3.5 * 1.1 + parts * 600;
+  }, 0);
+  const mid = body + batches * TOKEN_MODEL.coldStartPerBatch * 0.6 + TOKEN_MODEL.verification;
+  return { low: Math.round(mid * TOKEN_MODEL.rangeLow / 1e3) * 1e3, high: Math.round(mid * TOKEN_MODEL.rangeHigh / 1e3) * 1e3, basis: `${legacy.length} specs fora do padr\xE3o em ${batches} lote(s)` };
+}
+
 // src/groups/documentation/sdd/scaffold.ts
-import path11 from "node:path";
+import path15 from "node:path";
 
 // src/remediation/changes.ts
 function upsert(ctx, rel, content, opts = {}) {
@@ -21276,7 +21993,7 @@ function suggestRuleGlobs(ctx, limit = 6) {
     const base = m ? m[1] : dir;
     counts.set(base, (counts.get(base) ?? 0) + 1);
   }
-  return [...counts].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([dir, files]) => ({ glob: `${dir}/*`, files }));
+  return [...counts].filter(([, n2]) => n2 >= 2).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([dir, files]) => ({ glob: `${dir}/*`, files }));
 }
 
 // src/groups/documentation/sdd/merge.ts
@@ -21579,30 +22296,6 @@ var parseGlobs = (raw) => (raw ?? "").split(",").map((g) => g.trim()).filter(Boo
 function render(template, vars) {
   return Object.entries(vars).reduce((t, [k, v]) => t.split(`{{${k}}}`).join(v), template);
 }
-function discoveryPart1() {
-  const text = TEMPLATES.discoveryPrompt;
-  const a = text.indexOf("## Parte 1");
-  const b = text.indexOf("## Parte 2");
-  return a >= 0 && b > a ? text.slice(a, b).trim() : text.trim();
-}
-function discoveryInstructions(m) {
-  return [
-    `Descoberta do SDD em ${m.projectName || "este reposit\xF3rio"}. Pasta de specs: \`${m.specsDir}/\`.`,
-    "",
-    discoveryPart1(),
-    "",
-    "## Manifesto",
-    "",
-    `O \`${MANIFEST_PATH}\` J\xC1 foi criado pelo repo-score; n\xE3o o recrie. Se encontrar diret\xF3rios de regra de neg\xF3cio que n\xE3o est\xE3o em \`ruleCodeGlobs\`, acrescente-os preservando o formato do arquivo.`,
-    `ruleCodeGlobs atuais: ${m.ruleCodeGlobs.length ? m.ruleCodeGlobs.map((g) => `\`${g}\``).join(", ") : "(vazio: defina a partir do que voc\xEA encontrar)"}.`,
-    "",
-    "## Limites",
-    "",
-    `Escreva apenas em \`${m.specsDir}/\` e, se preciso, em \`${MANIFEST_PATH}\`. N\xE3o altere c\xF3digo, testes nem outros arquivos. Cita\xE7\xF5es \`Arquivo: caminho\` relativas \xE0 raiz do repo, sem n\xFAmero de linha, e todas devem apontar para arquivos que existem. N\xE3o use marcadores TODO/TBD.`,
-    "",
-    "Ao terminar, informe: quantos documentos criou, a pasta de specs e os ruleCodeGlobs finais."
-  ].join("\n");
-}
 var MAX_LISTED = 60;
 function gapInstructions(m, u, extraTargets) {
   const files = [.../* @__PURE__ */ new Set([...u.declaredUncited, ...u.siblingsUncited])].sort();
@@ -21611,7 +22304,13 @@ function gapInstructions(m, u, extraTargets) {
     `Completar o SDD de ${m.projectName || "este reposit\xF3rio"}: h\xE1 regras de neg\xF3cio sem spec. Pasta de specs: \`${m.specsDir}/\`.`,
     "",
     `Arquivos sem cita\xE7\xE3o em nenhuma spec (${files.length}${files.length > shown.length ? `, mostrando ${shown.length}` : ""}); "irm\xE3o" = achado por heur\xEDstica nas pastas das regras conhecidas e pode n\xE3o ser regra:`,
-    ...shown.map((f) => `- \`${f}\`${u.declaredUncited.includes(f) ? " (no per\xEDmetro)" : " (irm\xE3o)"}`),
+    ...shown.map((f) => `- \`${f}\`${u.declaredUncited.includes(f) ? " (no per\xEDmetro)" : " (irm\xE3o)"} \xB7 [${audienceOfFile(f)}]`),
+    "",
+    "## Padr\xE3o (obrigat\xF3rio)",
+    "",
+    STANDARD_BRIEF,
+    "",
+    "A marca\xE7\xE3o `[BUS]`/`[ENG]` ao lado de cada arquivo \xE9 a sugerida pelo script; use-a no nome da spec nova (`NN.k-BUS-tema.md` ou `NN.k-ENG-tema.md`) e no t\xEDtulo. Specs novas seguem os 4 blocos e o limite de linhas.",
     "",
     "## Como proceder",
     "",
@@ -21635,6 +22334,7 @@ function skillInstructions(m) {
     `Altere somente \`${m.skillPath}\`.`
   ].join("\n");
 }
+var specAbsentNow = (ctx, specsDir) => !ctx.files.some((f) => f.startsWith(`${specsDir.replace(/\/+$/, "")}/`));
 function planSdd(ctx, params) {
   const notes = [];
   const postSteps = [];
@@ -21645,7 +22345,11 @@ function planSdd(ctx, params) {
   if (state.state === "invalid") {
     return { changes: [], guided: [], notes: [`${MANIFEST_PATH} existe mas \xE9 inv\xE1lido (${state.reason}). Corrija ou apague o arquivo e rode de novo.`], postSteps: [] };
   }
-  const repoName = path11.basename(ctx.root);
+  const repoName = path15.basename(ctx.root);
+  const wantedSpecsDir = (state.state === "ok" ? state.manifest.specsDir : params["specs_dir"] || "docs/specs").replace(/\/+$/, "");
+  const specsAbsent = !ctx.files.some((f) => f.startsWith(`${wantedSpecsDir}/`));
+  const maxSpecs = Number(params["max_specs"]) > 0 ? Number(params["max_specs"]) : void 0;
+  const specPlan = specsAbsent && state.state !== "ok" ? buildSpecPlanCached(ctx, { specsDir: wantedSpecsDir, ...maxSpecs ? { maxSpecs } : {} }) : null;
   let manifest;
   if (state.state === "ok") {
     manifest = state.manifest;
@@ -21653,15 +22357,16 @@ function planSdd(ctx, params) {
       notes.push(`O repo j\xE1 tem ${MANIFEST_PATH}; specs_dir e skill_slug foram ignorados (edite o manifest para mud\xE1-los). rule_globs \xE9 somado ao per\xEDmetro existente.`);
     }
   } else {
-    const slug = kebab(params["skill_slug"] || `sdd-${repoName.split(".").pop() ?? repoName}`).replace(/^(?!sdd-)/, "sdd-");
+    const slug2 = kebab(params["skill_slug"] || `sdd-${repoName.split(".").pop() ?? repoName}`).replace(/^(?!sdd-)/, "sdd-");
     manifest = {
       version: 1,
       projectName: params["project_name"] || repoName,
       specsDir: (params["specs_dir"] || "docs/specs").replace(/\/+$/, ""),
-      skillSlug: slug,
-      skillPath: `.claude/skills/${slug}/SKILL.md`,
-      ruleCodeGlobs: parseGlobs(params["rule_globs"])
+      skillSlug: slug2,
+      skillPath: `.claude/skills/${slug2}/SKILL.md`,
+      ruleCodeGlobs: parseGlobs(params["rule_globs"]).length ? parseGlobs(params["rule_globs"]) : specPlan?.globs ?? []
     };
+    if (specPlan && !params["rule_globs"]) notes.push(`Per\xEDmetro (ruleCodeGlobs) derivado do plano de specs: ${specPlan.globs.length} pasta(s) com regra de neg\xF3cio. Revise antes de mesclar; --param rule_globs=a,b substitui.`);
     push({ op: "create", path: MANIFEST_PATH, content: JSON.stringify(manifest, null, 2) + "\n", note: "contrato lido pelos hooks (jq)" });
     if (manifest.ruleCodeGlobs.length === 0) {
       const sug = suggestRuleGlobs(ctx);
@@ -21710,14 +22415,9 @@ function planSdd(ctx, params) {
   const skillExists = ctx.files.includes(manifest.skillPath);
   const skillText = skillExists ? ctx.readText(manifest.skillPath) : null;
   push(upsert(ctx, manifest.skillPath, render(TEMPLATES.skillTemplate, { SKILL_SLUG: manifest.skillSlug, PROJECT_NAME: manifest.projectName, SPECS_DIR: manifest.specsDir }), { createOnly: true, note: "rascunho com TODOs: preencha com a tarefa guiada" }));
-  const needsDiscovery = specsDocs.filter((d) => !/(^|\/)readme\.md$/i.test(d.rel)).length === 0;
-  if (needsDiscovery) {
-    guided.push({
-      id: "sdd-discovery",
-      title: "Descoberta: escrever as specs vivas",
-      instructions: discoveryInstructions(manifest),
-      targets: [`${manifest.specsDir}/`]
-    });
+  if (specPlan) {
+    guided.push(...adoptionTasks(manifest, specPlan));
+    for (const d of specPlan.deferred.slice(0, 1)) notes.push(`O plano tem ${specPlan.deferred.length} spec(s) adiada(s) por or\xE7amento (ex.: ${d.title}); --param max_specs=N aumenta o limite.`);
   }
   if (!skillExists || skillText !== null && /\bTODO\b/.test(skillText)) {
     guided.push({
@@ -21755,6 +22455,14 @@ function planSdd(ctx, params) {
         instructions: gapInstructions(manifest, universe, [manifest.skillPath, ...skillLinks]),
         targets: [`${manifest.specsDir}/`, manifest.skillPath, ...skillLinks, "repo-score.policy.json"]
       });
+    }
+  }
+  if (!specAbsentNow(ctx, manifest.specsDir) && params["migrate"] !== "none") {
+    const lint = lintSpecs(ctx, manifest.specsDir);
+    const legacy = lint.filter((r) => r.issues.length > 0);
+    if (legacy.length > 0) {
+      guided.push(...migrationTasks(manifest, lint));
+      notes.push(`${legacy.length} de ${lint.length} specs existentes est\xE3o fora do padr\xE3o (${legacy.filter((r) => r.issues.some((i) => i.level === "error")).length} com erro); a migra\xE7\xE3o preserva o conte\xFAdo. --param migrate=none ignora.`);
     }
   }
   const hooksPath = ctx.git(["config", "core.hooksPath"])?.trim() ?? "";
@@ -21824,7 +22532,7 @@ function planAdr(ctx) {
 }
 
 // src/groups/documentation/remediation/broken-refs.ts
-import path12 from "node:path";
+import path16 from "node:path";
 function planBrokenRefs(ctx) {
   const { broken } = brokenRefs(ctx);
   if (broken.length === 0) return null;
@@ -21840,7 +22548,7 @@ function planBrokenRefs(ctx) {
       continue;
     }
     const target = cands[0];
-    const to = b.kind === "link" ? path12.posix.relative(dirname(b.doc), target) : target;
+    const to = b.kind === "link" ? path16.posix.relative(dirname(b.doc), target) : target;
     edits.set(b.doc, [...edits.get(b.doc) ?? [], { line: b.line, from: b.raw, to }]);
   }
   const changes = [];
@@ -21890,11 +22598,11 @@ ${missing.join("\n")}
 }
 
 // src/groups/documentation/remediation/index-docs.ts
-import path13 from "node:path";
+import path17 from "node:path";
 var BLOCK_RE = new RegExp(`${MANAGED_START}[\\s\\S]*?${MANAGED_END}\\n?`);
 function renderBlock(indexRel, entries) {
-  const dir = path13.posix.dirname(indexRel);
-  const lines = entries.map((e) => `- [${e.title}](${path13.posix.relative(dir === "." ? "" : dir, e.rel)})`);
+  const dir = path17.posix.dirname(indexRel);
+  const lines = entries.map((e) => `- [${e.title}](${path17.posix.relative(dir === "." ? "" : dir, e.rel)})`);
   return [
     MANAGED_START,
     "## Documentos ainda n\xE3o indexados",
@@ -21914,12 +22622,12 @@ function planIndex(ctx) {
   const indexes = [.../* @__PURE__ */ new Set([...indexDocs(ctx, idx), indexRel])].filter((i) => idx.fileSet.has(i));
   const listed = indexedTargets(idx, indexes, true);
   const top = topLevelDocs(ctx, idx).filter((t) => !listed.has(t));
-  const override = /* @__PURE__ */ new Map();
+  const override2 = /* @__PURE__ */ new Map();
   for (const rel of indexes) {
     const doc = idx.docs.find((d) => d.rel === rel);
-    if (doc) override.set(rel, extractRefs(stripManagedBlock(doc.text)).map((r) => ({ ...r, resolved: resolveTarget(r.kind, r.raw, rel, idx.fileSet, idx.dirSet) })));
+    if (doc) override2.set(rel, extractRefs(stripManagedBlock(doc.text)).map((r) => ({ ...r, resolved: resolveTarget(r.kind, r.raw, rel, idx.fileSet, idx.dirSet) })));
   }
-  const orphans = orphanDocs(idx, override).orphans;
+  const orphans = orphanDocs(idx, override2).orphans;
   const wanted = [.../* @__PURE__ */ new Set([...top, ...orphans])].filter((r) => r !== indexRel).sort();
   const entries = wanted.map((rel) => ({ rel, title: docTitle(idx.docs.find((d) => d.rel === rel)) }));
   const notes = [];
@@ -21977,7 +22685,7 @@ function planOwners(ctx) {
 }
 
 // src/groups/documentation/remediation/readme.ts
-import path14 from "node:path";
+import path18 from "node:path";
 function appFacts(ctx, dir) {
   const prefix = dir === "" ? "" : `${dir}/`;
   const inApp = ctx.files.filter((f) => f.startsWith(prefix) && f.slice(prefix.length).split("/").length <= 3);
@@ -21985,7 +22693,7 @@ function appFacts(ctx, dir) {
   const sln = inApp.filter((f) => /\.sln$/.test(f));
   const proj = inApp.filter((f) => /\.(cs|fs)proj$/.test(f));
   if (sln.length || proj.length) facts.push(`.NET: ${[...sln, ...proj].slice(0, 6).join(", ")} (build/test t\xEDpicos: dotnet build, dotnet test)`);
-  const pkg = inApp.find((f) => path14.posix.basename(f) === "package.json");
+  const pkg = inApp.find((f) => path18.posix.basename(f) === "package.json");
   if (pkg) {
     try {
       const scripts = Object.keys(JSON.parse(ctx.readText(pkg) ?? "{}").scripts ?? {});
@@ -21994,10 +22702,10 @@ function appFacts(ctx, dir) {
       facts.push(`Node: ${pkg}`);
     }
   }
-  if (inApp.some((f) => path14.posix.basename(f) === "go.mod")) facts.push("Go: go.mod presente");
+  if (inApp.some((f) => path18.posix.basename(f) === "go.mod")) facts.push("Go: go.mod presente");
   const docker = inApp.filter((f) => /(^|\/)Dockerfile[^/]*$/.test(f));
   if (docker.length) facts.push(`Dockerfile: ${docker.slice(0, 3).join(", ")}`);
-  const appName = dir === "" ? null : path14.posix.basename(dir);
+  const appName = dir === "" ? null : path18.posix.basename(dir);
   const iac = appName ? ctx.files.filter((f) => f.startsWith(`iac/${appName}/`)).slice(0, 3) : ctx.files.filter((f) => /(^|\/)iac\//.test(f)).slice(0, 3);
   if (iac.length) facts.push(`IaC/deploy do app: ${iac.join(", ")}`);
   const appSettings = inApp.filter((f) => /appsettings[^/]*\.json$|\.env(\.|$)|application[^/]*\.ya?ml$/i.test(f)).slice(0, 4);
@@ -22034,6 +22742,10 @@ function planReadme(ctx) {
 }
 
 // src/groups/documentation/remediation/actions.ts
+var readManifestSpecsDir = (ctx, params) => {
+  const m = readManifest(ctx);
+  return m.state === "ok" ? m.manifest.specsDir : (params["specs_dir"] || "docs/specs").replace(/\/+$/, "");
+};
 var git2 = { tool: "git", why: "as altera\xE7\xF5es v\xE3o para uma branch nova", blocking: true };
 var DOCUMENTATION_ACTIONS = [
   {
@@ -22052,15 +22764,25 @@ var DOCUMENTATION_ACTIONS = [
       { key: "specs_dir", label: "Pasta das specs", default: "docs/specs", help: "Onde ficam as especifica\xE7\xF5es vivas." },
       { key: "skill_slug", label: "Nome da skill do dom\xEDnio", help: "Ex.: sdd-pagamentos (padr\xE3o: sdd-<nome do repo>)." },
       { key: "rule_globs", label: "Globs do c\xF3digo de regra de neg\xF3cio", help: "Separados por v\xEDrgula, ex.: src/Domain/Rules/*. O gate vigia esses arquivos." },
-      { key: "project_name", label: "Nome do projeto", help: "Padr\xE3o: nome da pasta do repo." }
+      { key: "project_name", label: "Nome do projeto", help: "Padr\xE3o: nome da pasta do repo." },
+      { key: "max_specs", label: "M\xE1ximo de specs nesta rodada", default: "60", help: "Limita o plano (e o custo); as de menor densidade de regra ficam adiadas." },
+      { key: "migrate", label: "Migrar specs legadas ao padr\xE3o", default: "auto", help: "none ignora as specs existentes fora do padr\xE3o." }
     ],
     plan: (ctx, params) => planSdd(ctx, params),
     estimateTokens(ctx, params) {
       const plan2 = planSdd(ctx, params);
       if (!plan2?.guided.length) return null;
+      const ids = plan2.guided.map((g) => g.id);
+      const parts = [];
+      if (ids.some((i) => i.startsWith("sdd-specs:"))) {
+        const maxSpecs = Number(params["max_specs"]) > 0 ? Number(params["max_specs"]) : void 0;
+        parts.push(estimateAdoption(buildSpecPlanCached(ctx, { specsDir: (params["specs_dir"] || "docs/specs").replace(/\/+$/, ""), ...maxSpecs ? { maxSpecs } : {} })));
+      }
+      if (ids.some((i) => i.startsWith("sdd-migrate:"))) parts.push(estimateMigration(ctx, lintSpecs(ctx, readManifestSpecsDir(ctx, params))));
       const u = ruleUniverse(ctx);
-      if (plan2.guided.some((g) => g.id === "sdd-gap-specs") && u) return estimateGapTokens(ctx, [.../* @__PURE__ */ new Set([...u.declaredUncited, ...u.siblingsUncited])]);
-      return estimateDiscoveryTokens(ctx, [...parseGlobs(params["rule_globs"]), ...ruleGlobs(ctx).globs]);
+      if (ids.includes("sdd-gap-specs") && u) parts.push(estimateGapTokens(ctx, [.../* @__PURE__ */ new Set([...u.declaredUncited, ...u.siblingsUncited])]));
+      if (parts.length === 0) return estimateDiscoveryTokens(ctx, [...parseGlobs(params["rule_globs"]), ...ruleGlobs(ctx).globs]);
+      return { low: parts.reduce((n2, p) => n2 + p.low, 0), high: parts.reduce((n2, p) => n2 + p.high, 0), basis: parts.map((p) => p.basis).join(" + ") };
     }
   },
   {
@@ -22457,6 +23179,23 @@ function score(rubric, input2) {
   };
 }
 
+// src/remediation/prompt.ts
+var quote = (s) => `"${s.replace(/"/g, '\\"')}"`;
+function optimizePrompt(root, fix) {
+  const lines = [
+    `/repo-score otimizar ${fix.id} ${quote(root)}`,
+    "",
+    `Otimizar a nota do reposit\xF3rio ${root}.`,
+    `A\xE7\xE3o: ${fix.id} \u2014 ${fix.title}`,
+    `Grupo: ${fix.group}${fix.criteria.length ? ` \xB7 crit\xE9rios: ${fix.criteria.join(", ")}` : ""}`,
+    "",
+    "Escopo: trate somente esta a\xE7\xE3o; n\xE3o fa\xE7a outras corre\xE7\xF5es nem altere o crit\xE9rio ou a rubrica.",
+    "Siga o fluxo da skill: previs\xE3o de tokens e minha confirma\xE7\xE3o antes de gastar; tudo numa BRANCH NOVA (nunca na branch atual), informando o nome na tela, e se j\xE1 houver uma sess\xE3o de corre\xE7\xE3o aberta neste repo, use a MESMA branch dela em vez de criar outra; recalcule a nota nessa branch; a decis\xE3o de merge, manter ou descartar \xE9 minha."
+  ];
+  if (fix.kind === "auto") lines.push("Esta a\xE7\xE3o \xE9 autom\xE1tica (0 tokens).");
+  return lines.join("\n");
+}
+
 // src/remediation/suggest.ts
 function targetFor(rubric, id) {
   for (const d of rubric.dimensions) for (const c of d.criteria) if (c.id === id) return c.points["2"];
@@ -22478,8 +23217,11 @@ function simulateTargets(rubric, input2, base, ids) {
 function buildSuggestions(args) {
   const { ctx, rubric, input: input2, base, groups } = args;
   const out = [];
+  const outcomes = Object.values(base.dimensions).flatMap((d) => d.criteria);
+  const hasRoom = (ids) => ids.some((id) => outcomes.some((o) => o.id === id && (o.state === "scored" && o.points < 2 || o.state === "unmeasured")));
   for (const g of GROUP_MODULES.filter((m) => groups.includes(m.id))) {
     for (const action of g.actions) {
+      if (!hasRoom(action.criteria)) continue;
       const plan2 = action.plan(ctx, {});
       if (!plan2) continue;
       const kind = plan2.changes.length === 0 && plan2.guided.length === 0 ? "manual" : action.kind;
@@ -22500,6 +23242,7 @@ function buildSuggestions(args) {
         tokens: kind === "auto" || kind === "manual" ? null : action.estimateTokens?.(ctx, {}) ?? null,
         requires: action.requires.map((r) => ({ tool: r.tool, found: hasCommand(r.tool, r.tool === "git" ? ["--version"] : ["--version"]), why: r.why, blocking: r.blocking })),
         params: action.params ?? [],
+        prompt: kind === "manual" ? null : optimizePrompt(args.root, { id: action.id, group: action.group, title: action.title, criteria: action.criteria, kind }),
         potential: sim && base.total !== null && sim.total !== null ? { criteria: lifted, gain_total: sim.total - base.total, total_after: sim.total, grade_after: sim.grade, dimension_pct_after: dimPct } : null
       });
     }
@@ -22509,23 +23252,23 @@ function buildSuggestions(args) {
 
 // src/groups-config.ts
 import { existsSync, mkdirSync, readFileSync as readFileSync2, writeFileSync } from "node:fs";
-import path16 from "node:path";
+import path20 from "node:path";
 import { fileURLToPath } from "node:url";
 
 // src/util/home.ts
 import os from "node:os";
-import path15 from "node:path";
+import path19 from "node:path";
 function reportsHome() {
-  return process.env["REPO_SCORE_HOME"] ?? path15.join(os.homedir(), ".repo-score");
+  return process.env["REPO_SCORE_HOME"] ?? path19.join(os.homedir(), ".repo-score");
 }
 
 // src/groups-config.ts
 var SkillConfigSchema = external_exports.object({ enabled: external_exports.array(external_exports.string()).min(1), note: external_exports.string().optional() });
 var UserConfigSchema = external_exports.object({ enabled_groups: external_exports.array(external_exports.string()).min(1) }).passthrough();
-var userConfigPath = () => path16.join(reportsHome(), "config.json");
+var userConfigPath = () => path20.join(reportsHome(), "config.json");
 function skillConfigPath() {
-  const here = path16.dirname(fileURLToPath(import.meta.url));
-  return [path16.resolve(here, "../references/groups.json"), path16.resolve(here, "../skill/references/groups.json"), path16.resolve(here, "../../skill/references/groups.json")].find((c) => existsSync(c)) ?? null;
+  const here = path20.dirname(fileURLToPath(import.meta.url));
+  return [path20.resolve(here, "../references/groups.json"), path20.resolve(here, "../skill/references/groups.json"), path20.resolve(here, "../../skill/references/groups.json")].find((c) => existsSync(c)) ?? null;
 }
 function readJson(file2, what) {
   try {
@@ -22564,7 +23307,7 @@ function setUserEnabled(rubric, ids) {
   const enabled = ids.length === 1 && ids[0] === "all" ? all : validate2(ids, all, "groups set");
   if (enabled.length === 0) throw new Error("informe ao menos um grupo");
   const file2 = userConfigPath();
-  mkdirSync(path16.dirname(file2), { recursive: true });
+  mkdirSync(path20.dirname(file2), { recursive: true });
   let current = {};
   if (existsSync(file2)) {
     try {
@@ -22603,7 +23346,7 @@ function resolveSelection(rubric, requested) {
 
 // src/policy.ts
 import { existsSync as existsSync2, readFileSync as readFileSync3 } from "node:fs";
-import path17 from "node:path";
+import path21 from "node:path";
 
 // src/groups/documentation/policy.ts
 var ReadmeSectionSchema = external_exports.object({
@@ -22711,7 +23454,7 @@ var PolicySchema = external_exports.object({
   secret_allowlist: external_exports.array(external_exports.object({ path: external_exports.string().min(1), justification: external_exports.string().min(10) })).default([])
 });
 function loadPolicy(root, explicit) {
-  const file2 = explicit ?? path17.join(root, "repo-score.policy.json");
+  const file2 = explicit ?? path21.join(root, "repo-score.policy.json");
   if (!existsSync2(file2)) {
     if (explicit) throw new Error(`pol\xEDtica n\xE3o encontrada: ${explicit}`);
     return { policy: PolicySchema.parse({}), source: null };
@@ -22754,22 +23497,22 @@ function compareRuns(prev, curr, tolerancePoints) {
 // src/verify/verify-evidence.ts
 import { execFileSync as execFileSync2 } from "node:child_process";
 import { existsSync as existsSync3, readFileSync as readFileSync4, realpathSync, statSync } from "node:fs";
-import path18 from "node:path";
+import path22 from "node:path";
 var MAX_FILE_BYTES = 10 * 1024 * 1024;
 function normalize(s) {
   return s.replace(/\s+/g, " ").trim();
 }
 function insideRoot(root, target) {
-  const rel = path18.relative(root, target);
-  return rel === "" || !rel.startsWith("..") && !path18.isAbsolute(rel);
+  const rel = path22.relative(root, target);
+  return rel === "" || !rel.startsWith("..") && !path22.isAbsolute(rel);
 }
 function resolveInside(root, p) {
   if (p.includes("\0")) return { ok: false, reason: "caminho inv\xE1lido" };
-  if (path18.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p)) {
+  if (path22.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p)) {
     return { ok: false, reason: "caminho absoluto n\xE3o \xE9 aceito; use caminho relativo \xE0 raiz do repo" };
   }
   const rootReal = realpathSync(root);
-  const abs = path18.resolve(rootReal, p);
+  const abs = path22.resolve(rootReal, p);
   if (!insideRoot(rootReal, abs)) return { ok: false, reason: "caminho fora da raiz do repo" };
   if (!existsSync3(abs)) return { ok: false, reason: "arquivo n\xE3o existe" };
   const real = realpathSync(abs);
@@ -22838,10 +23581,8 @@ function verifyResults(root, results) {
   return { results: out, issues };
 }
 
-// src/analyze.ts
-var TOOL_VERSION = "0.1.0";
+// src/scorer/final-grade.ts
 var MIN_COVERAGE_FOR_GRADE = 0.5;
-var OUT_OF_SCOPE = "grupo fora do escopo desta an\xE1lise";
 function finalGrade(result, minCoverage = MIN_COVERAGE_FOR_GRADE) {
   if (result.total === null || result.grade === null) {
     return { grade: "E", computed_grade: result.grade, reason: "nothing_measured" };
@@ -22851,6 +23592,10 @@ function finalGrade(result, minCoverage = MIN_COVERAGE_FOR_GRADE) {
   }
   return { grade: result.grade, computed_grade: result.grade, reason: null };
 }
+
+// src/analyze.ts
+var TOOL_VERSION = "0.1.0";
+var OUT_OF_SCOPE = "grupo fora do escopo desta an\xE1lise";
 function targetValue(def, points) {
   return def.points[points === 2 ? "2" : "1"];
 }
@@ -22886,10 +23631,10 @@ function opportunities(rubric, input2, base) {
 }
 function repoSlug(root) {
   const h = createHash2("sha256").update(root).digest("hex").slice(0, 6);
-  return `${path19.basename(root).replace(/[^\w.-]+/g, "_")}-${h}`;
+  return `${path23.basename(root).replace(/[^\w.-]+/g, "_")}-${h}`;
 }
 async function analyze(opts) {
-  const root = path19.resolve(opts.root);
+  const root = path23.resolve(opts.root);
   if (!existsSync4(root) || !statSync2(root).isDirectory()) throw new Error(`diret\xF3rio n\xE3o encontrado: ${root}`);
   const rubric = parseRubric(JSON.parse(readFileSync5(opts.rubricPath, "utf8")));
   const { policy, source } = loadPolicy(root, opts.policyPath);
@@ -22915,17 +23660,17 @@ async function analyze(opts) {
   }
   const verified = verifyResults(root, collected);
   const input2 = {
-    repo: path19.basename(root),
+    repo: path23.basename(root),
     generated_at: now.toISOString(),
     rubric_version: rubric.version,
     profile: resolveProfile(policy),
     results: verified.results
   };
   const result = score(rubric, input2);
-  const outDir = opts.outDir ?? path19.join(reportsHome(), repoSlug(root));
+  const outDir = opts.outDir ?? path23.join(reportsHome(), repoSlug(root));
   mkdirSync2(outDir, { recursive: true });
   let previous = null;
-  const latestFile = path19.join(outDir, "latest.json");
+  const latestFile = path23.join(outDir, "latest.json");
   if (existsSync4(latestFile)) {
     try {
       const p = JSON.parse(readFileSync5(latestFile, "utf8"));
@@ -22946,7 +23691,7 @@ async function analyze(opts) {
   }
   const data = {
     meta: {
-      repo: path19.basename(root),
+      repo: path23.basename(root),
       path: root,
       branch: git(root, ["rev-parse", "--abbrev-ref", "HEAD"])?.trim() ?? null,
       commit: git(root, ["rev-parse", "--short", "HEAD"])?.trim() ?? null,
@@ -22974,12 +23719,12 @@ async function analyze(opts) {
     fixes: buildSuggestions({ root, ctx, rubric, input: input2, base: result, groups: selected }),
     criteria
   };
-  return { data, outDir };
+  return { data, outDir, input: input2, rubric };
 }
 function persist(outDir, data, html) {
   const stamp2 = data.meta.generated_at.replace(/[:.]/g, "-");
-  const jsonFile = path19.join(outDir, `result-${stamp2}.json`);
-  const htmlFile = path19.join(outDir, `report-${stamp2}.html`);
+  const jsonFile = path23.join(outDir, `result-${stamp2}.json`);
+  const htmlFile = path23.join(outDir, `report-${stamp2}.html`);
   writeFileSync2(jsonFile, JSON.stringify(data, null, 2) + "\n");
   writeFileSync2(htmlFile, html);
   const latest = {
@@ -22990,18 +23735,176 @@ function persist(outDir, data, html) {
     commit: data.meta.commit,
     groups: data.meta.selected_groups
   };
-  writeFileSync2(path19.join(outDir, "latest.json"), JSON.stringify(latest, null, 2) + "\n");
-  writeFileSync2(path19.join(outDir, "report.html"), html);
+  writeFileSync2(path23.join(outDir, "latest.json"), JSON.stringify(latest, null, 2) + "\n");
+  writeFileSync2(path23.join(outDir, "report.html"), html);
   for (const prefix of ["result-", "report-"]) {
     const files = readdirSync2(outDir).filter((f) => f.startsWith(prefix)).sort();
-    for (const f of files.slice(0, Math.max(0, files.length - 20))) rmSync(path19.join(outDir, f), { force: true });
+    for (const f of files.slice(0, Math.max(0, files.length - 20))) rmSync(path23.join(outDir, f), { force: true });
   }
   return { json: jsonFile, html: htmlFile };
 }
 
+// src/groups/documentation/sdd/discovery/simulate.ts
+import path24 from "node:path";
+function summarize(label, r, note) {
+  const f = finalGrade(r);
+  const doc = r.dimensions["documentation"];
+  const criteria = {};
+  for (const c of doc?.criteria ?? []) criteria[c.id] = c.state === "scored" ? c.points : null;
+  return { label, grade: f.grade, total: r.total, documentation: doc?.score_pct ?? null, criteria, note };
+}
+var override = (id, value) => ({ id, status: "measured", value, evidence: [{ kind: "job", name: "simulacao" }] });
+function withOverrides(input2, o) {
+  const ids = new Set(o.map((r) => r.id));
+  return { ...input2, results: [...input2.results.filter((r) => !ids.has(r.id)), ...o] };
+}
+function simulateSdd(ctx, base, opts = {}) {
+  const root = ctx.root;
+  const specsDirExists = ctx.files.some((f) => f.startsWith("docs/specs/"));
+  const docsDirExists = ctx.files.some((f) => f.startsWith("docs/"));
+  const manifest = readManifest(ctx);
+  const hooks = ctx.files.some((f) => f.startsWith(".githooks/"));
+  const detection = {
+    sddPresent: specsDirExists,
+    specsDirExists,
+    docsDirExists,
+    manifest: manifest.state,
+    hooks,
+    reason: specsDirExists ? "docs/specs existe na raiz: o SDD j\xE1 foi adotado (use a a\xE7\xE3o de completar)" : docsDirExists ? "docs/ existe, mas docs/specs n\xE3o: SDD ausente" : "nem docs/ existe: o repo parte do zero"
+  };
+  const plan2 = buildSpecPlan(ctx, { ...opts.maxSpecs ? { maxSpecs: opts.maxSpecs } : {} });
+  const forecast = forecastTokens(plan2);
+  const sdd = planSdd(ctx, { rule_globs: plan2.globs.join(","), specs_dir: plan2.specsDir });
+  const guardrails = (sdd?.changes ?? []).map((c) => ({ path: c.path, mode: c.op === "delete" ? "remover" : c.op === "modify" ? "alterar" : "criar" + (c.op === "create" && c.mode === "exec" ? " (execut\xE1vel)" : "") }));
+  const idx = getDocIndex(ctx);
+  const { total, broken } = brokenRefs(ctx);
+  const newRefs = plan2.specs.reduce((n2, s) => n2 + s.pointers.length + (s.parent ? 1 : 0), 0);
+  const d4 = total + newRefs === 0 ? null : (total - broken.length + newRefs) / (total + newRefs) * 100;
+  const top = topLevelDocs(ctx, idx);
+  const listed = indexedTargets(idx, indexDocs(ctx, idx));
+  const d5 = (top.filter((t) => listed.has(t)).length + 1) / (top.length + 1) * 100;
+  const o = orphanDocs(idx);
+  const d6 = (o.considered.length - o.orphans.length + plan2.specs.length) / (o.considered.length + plan2.specs.length) * 100;
+  const { linked, siblings } = plannedSiblings(ctx, plan2);
+  const d7 = linked.length + siblings.length === 0 ? null : linked.length / (linked.length + siblings.length) * 100;
+  const sddOnly = [override("D4", d4 ?? 100), override("D5", d5), override("D6", d6), ...d7 === null ? [] : [override("D7", d7)]];
+  const a = score(base.rubric, withOverrides(base.input, sddOnly));
+  const lifts = [];
+  for (const id of ["D1", "D2", "D3", "D5", "D6", "D8"]) {
+    const def = base.rubric.dimensions.flatMap((d) => d.criteria).find((c) => c.id === id);
+    const cur = a.dimensions["documentation"]?.criteria.find((c) => c.id === id);
+    if (cur?.state === "scored" && cur.points < 2) lifts.push(override(id, def.points["2"]));
+  }
+  const b = score(base.rubric, withOverrides(withOverrides(base.input, sddOnly), lifts));
+  const projections = [
+    summarize("Depois do SDD (specs + guardrails + \xEDndice das specs)", a, "teto: assume as specs escritas e validadas pelo lint; D1, D2, D3 e D8 n\xE3o mudam com o SDD"),
+    summarize("SDD + demais a\xE7\xF5es (README, OWNERS, ADR, \xEDndice, higiene)", b, "teto: assume tamb\xE9m D1, D2, D3, D5, D6 e D8 em 2 pontos (a spec de c\xF3digo n\xE3o cobre README, OWNERS, ADR nem os docs antigos \xF3rf\xE3os)")
+  ];
+  const first = plan2.specs.find((s) => s.kind === "regra") ?? plan2.specs[0];
+  const parent = first.parent ? plan2.specs.find((s) => s.id === first.parent) : void 0;
+  const sampleBrief = renderSpecSkeleton({
+    id: first.id,
+    title: first.title,
+    ...parent ? { parent: { id: parent.id, title: parent.title, file: parent.file } } : {},
+    files: first.pointers
+  });
+  const journey = [
+    { step: 1, kind: "script", title: "Detectar SDD", command: `repo-score plan "${root}"`, detail: "procura docs/specs na raiz; confere pr\xE9-requisitos (git, jq, claude)" },
+    { step: 2, kind: "script", title: "Inventariar documentos e c\xF3digo", command: `repo-score sdd simulate "${root}"`, detail: "esta simula\xE7\xE3o; l\xEA o repo e n\xE3o escreve nada" },
+    { step: 3, kind: "usuario", title: "Pr\xE9via e confirma\xE7\xE3o com o custo em tokens", command: `repo-score fix preview "${root}" --actions sdd-adopt`, detail: "lista os arquivos que seriam criados; voc\xEA confirma o gasto" },
+    { step: 4, kind: "script", title: "Criar a branch e os guardrails", command: `repo-score fix start "${root}" --actions sdd-adopt`, detail: "branch nova; manifest, hooks, settings, se\xE7\xE3o do README (0 tokens)" },
+    { step: 5, kind: "claude", title: "Criar as specs em lotes", command: "(skill) subagentes por lote de at\xE9 6 specs", detail: "cada lote recebe o padr\xE3o, o esqueleto e os ponteiros; progresso por spec" },
+    { step: 6, kind: "script", title: "Validar o padr\xE3o", command: `repo-score sdd lint "${root}"`, detail: "4 blocos, tamanho, ponteiros Arquivo: existentes, sem n\xFAmero de linha" },
+    { step: 7, kind: "script", title: "Recalcular a nota na branch nova", command: `repo-score fix seal "${root}"`, detail: "antes/depois medidos, n\xE3o estimados" },
+    { step: 8, kind: "usuario", title: "Decidir: merge, manter ou descartar", command: `repo-score fix finish "${root}" --decision keep|merge|discard`, detail: "nada \xE9 enviado; ativar hooks \xE9 passo \xE0 parte" }
+  ];
+  return {
+    repo: { name: base.meta.repo, path: root, branch: base.meta.branch, commit: base.meta.commit },
+    detection,
+    plan: plan2,
+    guardrails,
+    guardrailNotes: sdd?.notes ?? [],
+    requirements: [
+      { tool: "git", found: hasCommand("git"), why: "branch nova e hist\xF3rico" },
+      { tool: "jq", found: hasCommand("jq"), why: "os hooks leem o manifest com jq e ficam inativos sem ele" },
+      { tool: "claude", found: hasCommand("claude"), why: "o sdd-analyze usa claude -p (tokens de quem commita spec)" }
+    ],
+    forecast,
+    sampleBrief,
+    baseline: summarize("Hoje", base.result, "medido"),
+    projections,
+    journey
+  };
+}
+var n = (x, d = 1) => x === null ? "n/d" : (Math.floor(x * 10 ** d) / 10 ** d).toFixed(d);
+var tk = (x) => x.toLocaleString("pt-BR");
+var KIND = { "visao-geral": "vis\xE3o geral", glossario: "gloss\xE1rio", orquestracao: "orquestra\xE7\xE3o", regra: "regra", convertida: "convertida" };
+function formatSimulation(r) {
+  const L = [];
+  const rule = (t) => L.push("", `\u2500\u2500 ${t} ${"\u2500".repeat(Math.max(2, 92 - t.length))}`);
+  L.push("SIMULA\xC7\xC3O DO SDD \u2014 nada foi criado, alterado ou commitado");
+  L.push(`Repo: ${r.repo.name} (${r.repo.branch ?? "?"}@${r.repo.commit ?? "?"})  ${r.repo.path}`);
+  L.push("Legenda: [\u25CF] script, 0 tokens \xB7 [\u25C6] o Claude trabalha, gasta tokens \xB7 [?] voc\xEA decide");
+  rule("PASSO A PASSO");
+  const d = r.detection;
+  const unconv = r.plan.docs.filter((x) => !x.convertible).length;
+  const conv = r.plan.docs.filter((x) => x.convertible).length;
+  L.push(` 1/8 [\u25CF] Detectar SDD ............ ${d.sddPresent ? "SDD presente" : "SDD AUSENTE"}: ${d.reason} (manifest: ${d.manifest}, hooks: ${d.hooks ? "sim" : "n\xE3o"})`);
+  L.push(` 2/8 [\u25CF] Inventariar documentos .. ${r.plan.stats.docsFound} documentos: ${conv} com regras de neg\xF3cio (converter), ${unconv} descartados`);
+  L.push(` 3/8 [\u25CF] Descobrir c\xF3digo de regra  ${r.plan.stats.ruleFiles} arquivos de regra em ${r.plan.apps.filter((a) => a.ruleFiles > 0).length} app(s); ${r.plan.stats.plumbingSkipped} de infraestrutura e ${r.plan.stats.lowSkipped} de baixa densidade ignorados`);
+  L.push(` 4/8 [\u25CF] Planejar as specs ....... ${r.plan.specs.length} specs no padr\xE3o (${r.plan.specs.filter((s) => s.audience === "BUS").length} [BUS] regra de neg\xF3cio, ${r.plan.specs.filter((s) => s.audience === "ENG").length} [ENG] t\xE9cnicas)${r.plan.deferred.length ? ` (+${r.plan.deferred.length} adiadas por or\xE7amento)` : ""}; per\xEDmetro de ${r.plan.globs.length} glob(s)`);
+  L.push(` 5/8 [\u25CF] Guardrails (hooks) ...... ${r.guardrails.length} arquivos a criar, 0 tokens`);
+  L.push(` 6/8 [?] Pr\xE9via e custo .......... \u2248 ${tk(r.forecast.low)}\u2013${tk(r.forecast.high)} tokens (central ${tk(r.forecast.mid)}) \xB7 \u2248 ${r.forecast.minutes} min com ${r.forecast.batches} lote(s)`);
+  L.push(` 7/8 [\u25C6] Criar as specs .......... ${r.forecast.batches} lote(s) de at\xE9 ${SPEC_BUDGET.specsPerBatch} specs, em paralelo`);
+  L.push(` 8/8 [\u25CF] Validar e recalcular ..... lint do padr\xE3o + nota medida na branch nova`);
+  rule("1. DETEC\xC7\xC3O");
+  L.push(`  docs/specs na raiz: ${d.specsDirExists ? "existe" : "n\xE3o existe"} \xB7 docs/: ${d.docsDirExists ? "existe" : "n\xE3o existe (ser\xE1 criada)"} \xB7 .sdd/manifest.json: ${d.manifest} \xB7 .githooks: ${d.hooks ? "existe" : "n\xE3o existe"}`);
+  rule("2. DOCUMENTOS EXISTENTES");
+  const convs = r.plan.docs.filter((x) => x.convertible);
+  if (convs.length === 0) L.push("  nenhum documento com regras de neg\xF3cio: as specs saem s\xF3 do c\xF3digo");
+  for (const x of convs) L.push(`  converter  ${x.path}  (${tk(x.tokens)} tok, sinal ${x.signal}) \u2192 ${x.destination ? `spec ${x.destination}` : "sem destino"}`);
+  const dropped = r.plan.docs.filter((x) => !x.convertible);
+  if (dropped.length) L.push(`  descartados (${dropped.length}): ${dropped.slice(0, 6).map((x) => path24.posix.basename(x.path)).join(", ")}${dropped.length > 6 ? ", \u2026" : ""}`);
+  rule("3. C\xD3DIGO DE REGRA POR APP");
+  for (const a of r.plan.apps) L.push(`  ${a.name.padEnd(46)} ${String(a.ruleFiles).padStart(3)} arquivos de regra \u2192 ${a.planned} specs`);
+  rule(`4. PLANO DE SPECS (padr\xE3o: 4 blocos, alvo ${SPEC_BUDGET.targetLines} e m\xE1ximo ${SPEC_BUDGET.maxLines} linhas, ponteiros Arquivo:)`);
+  L.push("  id     tipo          ptrs  c\xF3d.lin  tokens  arquivo / recorte");
+  for (const s of r.plan.specs) {
+    L.push(`  ${s.id.padEnd(6)} ${KIND[s.kind].padEnd(13)} ${String(s.pointers.length).padStart(4)} ${String(s.codeLines || "").padStart(8)} ${tk(r.forecast.perSpec[s.id] ?? 0).padStart(7)}  ${s.file}${s.subtopic ? `  [${s.subtopic}]` : ""}${s.sourceDocs.length ? `  \u27F5 ${s.sourceDocs.map((x) => path24.posix.basename(x)).join(", ")}` : ""}`);
+    for (const note of s.notes.filter((x) => x.startsWith("nenhum"))) L.push(`         \u26A0 ${note}`);
+  }
+  if (r.plan.deferred.length) L.push(`  adiadas (${r.plan.deferred.length}): ${r.plan.deferred.slice(0, 5).map((x) => x.title).join("; ")}${r.plan.deferred.length > 5 ? "; \u2026" : ""}`);
+  L.push(`  per\xEDmetro (ruleCodeGlobs): ${r.plan.globs.slice(0, 4).join(", ")}${r.plan.globs.length > 4 ? `, \u2026 (+${r.plan.globs.length - 4})` : ""}`);
+  rule("5. GUARDRAILS (iguais aos do risk-services)");
+  for (const g of r.guardrails) L.push(`  ${g.mode.padEnd(22)} ${g.path}`);
+  for (const q of r.requirements) L.push(`  pr\xE9-requisito ${q.tool}: ${q.found ? "ok" : "AUSENTE"} \u2014 ${q.why}`);
+  L.push("  fora da branch (passo \xE0 parte, com a sua confirma\xE7\xE3o): git config core.hooksPath .githooks");
+  rule("6. PREVIS\xC3O DE TOKENS");
+  for (const b of r.forecast.breakdown) L.push(`  ${tk(b.tokens).padStart(9)}  ${b.item}`);
+  L.push(`  ${"".padStart(9, "\u2500")}`);
+  L.push(`  ${tk(r.forecast.mid).padStart(9)}  central \xB7 faixa ${tk(r.forecast.low)}\u2013${tk(r.forecast.high)} \xB7 ${r.forecast.basis}`);
+  L.push("  custo recorrente do SDD: cada commit de spec roda claude -p (sdd-analyze) na conta de quem commita");
+  rule("7. ESQUELETO QUE CADA TAREFA RECEBE (exemplo)");
+  L.push(...r.sampleBrief.split("\n").map((l) => `  \u2502 ${l}`));
+  L.push(`  blocos obrigat\xF3rios, nesta ordem: ${SPEC_BLOCKS.join(" \xB7 ")}`);
+  rule("8. NOTA DE DOCUMENTA\xC7\xC3O: HOJE \xD7 PROJE\xC7\xC3O");
+  const rows = [r.baseline, ...r.projections];
+  L.push("  cen\xE1rio".padEnd(66) + "nota  total  Doc%   D1 D2 D3 D4 D5 D6 D7 D8");
+  for (const p of rows) {
+    L.push(`  ${p.label.padEnd(64)} ${p.grade.padEnd(5)} ${n(p.total).padStart(5)} ${n(p.documentation).padStart(5)}   ${["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"].map((c) => (p.criteria[c] === null || p.criteria[c] === void 0 ? "\u2013" : String(p.criteria[c])).padStart(2)).join(" ")}`);
+  }
+  for (const p of r.projections) L.push(`  \xB7 ${p.label}: ${p.note}`);
+  rule("JORNADA NA SKILL (o que o usu\xE1rio ver\xE1, passo a passo)");
+  for (const j of r.journey) L.push(`  ${j.step}. [${j.kind === "script" ? "\u25CF" : j.kind === "claude" ? "\u25C6" : "?"}] ${j.title}
+       $ ${j.command}
+       ${j.detail}`);
+  L.push("", "Nada foi escrito: nenhum arquivo, branch ou commit no repo. Esta sa\xEDda pode ser repetida \xE0 vontade.");
+  return L.join("\n");
+}
+
 // src/plan.ts
 import { existsSync as existsSync5, readFileSync as readFileSync6, statSync as statSync3 } from "node:fs";
-import path20 from "node:path";
+import path25 from "node:path";
 var tokensOf = (chars) => Math.ceil(chars / 3.5);
 function estimateSession(skillChars, planChars) {
   const breakdown = [
@@ -23027,7 +23930,7 @@ function installHint(tool) {
   return p === "darwin" ? h.darwin : p === "win32" ? h.win32 : h.linux;
 }
 function plan(opts) {
-  const root = path20.resolve(opts.root);
+  const root = path25.resolve(opts.root);
   const rubric = parseRubric(JSON.parse(readFileSync6(opts.rubricPath, "utf8")));
   const { selected, enabled } = resolveSelection(rubric, opts.groups);
   const measurableIds = new Set(ALL_COLLECTORS.flatMap((c) => c.ids));
@@ -23059,8 +23962,8 @@ function plan(opts) {
       files = ctx.files.length;
     }
     if (isGit) {
-      const n = Number(git(root, ["rev-list", "--count", "HEAD"])?.trim());
-      commits = Number.isFinite(n) ? n : null;
+      const n2 = Number(git(root, ["rev-list", "--count", "HEAD"])?.trim());
+      commits = Number.isFinite(n2) ? n2 : null;
       shallow = git(root, ["rev-parse", "--is-shallow-repository"])?.trim() === "true";
       branch = git(root, ["rev-parse", "--abbrev-ref", "HEAD"])?.trim() ?? null;
       commit2 = git(root, ["rev-parse", "--short", "HEAD"])?.trim() ?? null;
@@ -23098,7 +24001,7 @@ function plan(opts) {
   const planChars = JSON.stringify(base).length;
   const est = estimateSession(skillChars, planChars);
   return {
-    repo: { name: path20.basename(root), path: root, exists, is_git: isGit, branch, commit: commit2, dirty, shallow, files, commits, policy_file: policyFile },
+    repo: { name: path25.basename(root), path: root, exists, is_git: isGit, branch, commit: commit2, dirty, shallow, files, commits, policy_file: policyFile },
     blockers,
     warnings,
     tools,
@@ -23145,10 +24048,10 @@ function formatPlan(p) {
 
 // src/remediation/engine.ts
 import { existsSync as existsSync7, mkdirSync as mkdirSync4, readFileSync as readFileSync7, writeFileSync as writeFileSync4 } from "node:fs";
-import path22 from "node:path";
+import path27 from "node:path";
 
 // ui/report.html
-var report_default = '<!doctype html>\n<html lang="pt-BR">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Repo Score</title>\n<style>\n:root {\n  color-scheme: light;\n  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;\n  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,.10);\n  --series: #2a78d6; --series-soft: #cde2fb;\n  --good: #0ca30c; --good-ink: #006300; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;\n  --on-fill: #0b0b0b; --on-critical: #ffffff;\n  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n}\n@media (prefers-color-scheme: dark) {\n  :root:where(:not([data-theme="light"])) {\n    color-scheme: dark;\n    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;\n    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10);\n    --series: #3987e5; --series-soft: #184f95; --good-ink: #0ca30c;\n  }\n}\n:root[data-theme="dark"] {\n  color-scheme: dark;\n  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;\n  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10);\n  --series: #3987e5; --series-soft: #184f95; --good-ink: #0ca30c;\n}\n* { box-sizing: border-box; }\nbody { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }\nmain { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }\nh1, h2, h3, p { margin: 0; }\nh2 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 36px 0 12px; }\n.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 20px; }\n.muted { color: var(--muted); } .sec { color: var(--ink-2); }\n.mono { font-family: var(--mono); font-size: 13px; }\n[hidden] { display: none !important; }\nbutton { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }\nbutton:focus-visible { outline: 2px solid var(--series); outline-offset: 2px; border-radius: 6px; }\n\nheader { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }\nheader h1 { font-size: 22px; font-weight: 650; }\nheader .meta { color: var(--ink-2); font-size: 13px; margin-top: 4px; display: flex; gap: 6px 14px; flex-wrap: wrap; }\n.tag { border: 1px solid var(--ring); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--ink-2); }\n.theme { border: 1px solid var(--ring); border-radius: 8px; padding: 6px 12px; font-size: 13px; color: var(--ink-2); background: var(--surface); }\n\n.hero { display: grid; grid-template-columns: auto 1fr minmax(240px, 320px); gap: 28px; align-items: center; margin-top: 20px; }\n.grade { width: 108px; height: 108px; border-radius: 22px; display: grid; place-items: center; font-size: 64px; font-weight: 700; line-height: 1; }\n.grade.good { background: var(--good); color: #fff; } .grade.warning { background: var(--warning); color: var(--on-fill); }\n.grade.serious { background: var(--serious); color: var(--on-fill); } .grade.critical { background: var(--critical); color: var(--on-critical); }\n.grade.none { background: var(--grid); color: var(--muted); }\n.total { font-size: 40px; font-weight: 650; letter-spacing: -.02em; }\n.total small { font-size: 18px; font-weight: 500; color: var(--muted); }\n.verdict { margin-top: 2px; font-size: 14px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; }\n.delta { margin-top: 8px; font-size: 14px; }\n.delta.up { color: var(--good-ink); } .delta.down { color: var(--critical); }\n.meter { height: 10px; background: var(--grid); border-radius: 5px; overflow: hidden; margin: 8px 0 6px; }\n.meter > span { display: block; height: 100%; background: var(--series); border-radius: 5px; }\n.cov-title { font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px; }\n\n.banner { display: flex; gap: 12px; align-items: flex-start; border-radius: 10px; padding: 12px 14px; margin-top: 14px; font-size: 14px; border: 1px solid var(--ring); background: var(--surface); }\n.banner .ic { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; }\n.banner.warn .ic { background: var(--warning); color: var(--on-fill); }\n.banner.danger { border-color: var(--critical); } .banner.danger .ic { background: var(--critical); color: #fff; }\n.banner strong { font-weight: 650; }\n\n.dim { border-top: 1px solid var(--grid); }\n.dim:first-child { border-top: 0; }\n.dim-head { display: grid; grid-template-columns: minmax(150px, 230px) 1fr 150px 18px; gap: 16px; align-items: center; width: 100%; padding: 12px 0; }\n.dim-name { font-weight: 600; } .dim-name small { font-weight: 400; color: var(--muted); margin-left: 6px; }\n.bar { position: relative; height: 12px; background: var(--grid); border-radius: 6px; }\n.bar > span { position: absolute; inset: 0 auto 0 0; background: var(--series); border-radius: 0 6px 6px 0; min-width: 2px; }\n.bar > b { position: absolute; right: 0; top: -22px; font-size: 13px; font-weight: 600; }\n.bar.empty { background: transparent; border: 1px dashed var(--axis); }\n.dim-count { font-size: 13px; color: var(--ink-2); text-align: right; }\n.chev { color: var(--muted); transition: transform .15s; } .dim.open .chev { transform: rotate(90deg); }\n.dim-body { display: none; padding: 4px 0 16px; } .dim.open .dim-body { display: block; }\n\n.seg { display: inline-flex; border: 1px solid var(--ring); border-radius: 8px; overflow: hidden; background: var(--surface); }\n.seg button { padding: 6px 12px; font-size: 13px; color: var(--ink-2); border-right: 1px solid var(--ring); }\n.seg button:last-child { border-right: 0; }\n.seg button[aria-pressed="true"] { background: var(--series); color: #fff; }\n\n.crit { border-top: 1px solid var(--grid); }\n.crit-row { display: grid; grid-template-columns: 44px 1fr 150px 92px 26px; gap: 12px; align-items: center; width: 100%; padding: 9px 0; }\n.cid { font-family: var(--mono); font-size: 12px; background: var(--grid); border-radius: 5px; padding: 2px 6px; text-align: center; }\n.ctitle small { display: block; color: var(--muted); font-size: 12px; }\n.cval { font-size: 13px; color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }\n.pill { display: inline-flex; gap: 5px; align-items: center; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; font-weight: 600; white-space: nowrap; justify-content: center; }\n.pill.p2 { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good-ink); }\n.pill.p1 { background: color-mix(in srgb, var(--warning) 28%, transparent); color: var(--ink); }\n.pill.p0 { background: color-mix(in srgb, var(--critical) 18%, transparent); color: var(--critical); }\n.pill.pn { background: var(--grid); color: var(--muted); }\n.gate { font-size: 11px; border: 1px solid var(--critical); color: var(--critical); border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }\n.crit.is-unmeasured .ctitle, .crit.is-na .ctitle { color: var(--muted); }\n.evid { display: none; padding: 2px 0 12px 56px; }\n.crit.open .evid { display: block; }\n.evid ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }\n.evid li { font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }\n.evid .where { font-family: var(--mono); font-size: 12.5px; color: var(--ink); background: none; border-bottom: 1px dotted var(--axis); cursor: copy; }\n.evid .why { color: var(--muted); }\n.thr { font-size: 12.5px; color: var(--muted); margin: 0 0 8px 56px; }\n.low { font-size: 11px; border: 1px solid var(--warning); border-radius: 4px; padding: 0 5px; color: var(--ink-2); }\n\n.opp { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--grid); }\n.opp:first-child { border-top: 0; }\n.gain { font-weight: 650; color: var(--good-ink); font-variant-numeric: tabular-nums; }\n.arrow { font-size: 13px; color: var(--ink-2); white-space: nowrap; }\n\ndetails { border-top: 1px solid var(--grid); padding: 10px 0; } details:first-child { border-top: 0; }\nsummary { cursor: pointer; font-weight: 600; font-size: 14px; }\n.reasons { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }\nfooter { margin-top: 40px; font-size: 13px; color: var(--muted); }\n\n@media (max-width: 760px) {\n  .hero { grid-template-columns: 1fr; justify-items: start; }\n  .dim-head { grid-template-columns: 1fr 18px; } .dim-head .bar-wrap, .dim-head .dim-count { grid-column: 1 / -1; text-align: left; }\n  .dim-head .bar-wrap { margin-top: 18px; }\n  .crit-row { grid-template-columns: 44px 1fr 26px; } .crit-row .cval, .crit-row .pill { grid-column: 2; justify-self: start; }\n  .evid, .thr { padding-left: 0; margin-left: 0; }\n  .opp { grid-template-columns: 44px 1fr; } .opp .gain, .opp .arrow { grid-column: 2; }\n}\n\n.fix { border-top: 1px solid var(--grid); padding: 14px 0; }\n.fix:first-child { border-top: 0; padding-top: 0; }\n.fix-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }\n.fix-head b { font-weight: 650; }\n.chip { font-size: 12px; border: 1px solid var(--ring); border-radius: 999px; padding: 1px 9px; color: var(--ink-2); white-space: nowrap; }\n.chip.auto { border-color: var(--good); color: var(--good-ink); }\n.chip.guided, .chip.mixed { border-color: var(--warning); }\n.fix p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }\n.fix .meta2 { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }\n.fix .warn2 { color: var(--ink); }\n.panel-item { display: grid; grid-template-columns: 26px 200px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--grid); font-size: 14px; align-items: baseline; }\n.panel-item:first-of-type { border-top: 0; }\n.st { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; }\n.st.ok { background: var(--good); color: #fff; } .st.warn { background: var(--warning); color: var(--on-fill); }\n.st.fail { background: var(--critical); color: #fff; } .st.info { background: var(--grid); color: var(--ink-2); }\n.callout { font-size: 13px; color: var(--ink-2); margin-top: 12px; }\n.callout code, .mono-inline { font-family: var(--mono); font-size: 12.5px; background: var(--grid); border-radius: 4px; padding: 1px 5px; }\n@media (max-width: 760px) { .panel-item { grid-template-columns: 26px 1fr; } .panel-item span:last-child { grid-column: 2; color: var(--muted); } }\n\n.comp { margin-top: 14px; }\n.comp h3 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 8px; }\n.comp .scroll { overflow-x: auto; }\n.comp table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }\n.comp th, .comp td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--grid); vertical-align: top; }\n.comp th { font-size: 12px; font-weight: 600; color: var(--muted); border-top: 0; white-space: nowrap; }\n.comp td.num, .comp th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }\n.comp tr.out td { color: var(--muted); }\n.comp tr.sum td { font-weight: 650; border-top: 2px solid var(--axis); }\n.comp .ids { display: flex; flex-wrap: wrap; gap: 3px 4px; }\n.comp .ids span { font-family: var(--mono); font-size: 11.5px; background: var(--grid); border-radius: 4px; padding: 0 5px; }\n.comp .ids span.none { background: transparent; color: var(--muted); font-family: inherit; padding: 0; }\n.part { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }\n.part i { font-style: normal; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; }\n.part.yes i { background: var(--good); color: #fff; } .part.no i { background: var(--grid); color: var(--ink-2); }\n.comp .foot { font-size: 12.5px; color: var(--muted); margin-top: 8px; }\n@media print { .theme, .seg { display: none; } body { background: #fff; } }\n</style>\n</head>\n<body>\n<main id="app"></main>\n<script id="data" type="application/json">__REPORT_DATA__</script>\n<script>\n(() => {\n  const D = JSON.parse(document.getElementById("data").textContent);\n  const R = D.result;\n  const DIMS = Object.values(R.dimensions);\n  const CRIT = D.criteria;\n  const NF = (d) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });\n  const trunc = (n, d = 1) => NF(d).format(Math.floor(n * 10 ** d + 1e-9) / 10 ** d); // nunca arredonda para cima\n  const STATE = { locked: "com lock e modo locked", present: "presente", absent: "ausente", none: "nenhum", "build+test": "build + testes", build: "s\xF3 build",\n    gating: "bloqueante", "non-blocking": "sem bloquear", "c1+c2": "C1 + C2", partial: "parcial", recent: "atualizado \u2264 12 meses", owners: "com code owners",\n    approval: "\u2265 1 aprova\xE7\xE3o", "present+no-divergence": "presente, sem diverg\xEAncia", "configured+required": "configurado e obrigat\xF3rio", configured: "configurado" };\n\n  // cria\xE7\xE3o de DOM: todo texto vem por textContent (nomes de arquivo e trechos do repo n\xE3o s\xE3o confi\xE1veis)\n  function h(tag, attrs, ...kids) {\n    const el = document.createElement(tag);\n    for (const [k, v] of Object.entries(attrs || {})) {\n      if (v == null || v === false) continue;\n      if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v);\n    }\n    for (const k of kids.flat()) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(String(k)));\n    return el;\n  }\n  const gradeClass = (g) => (!g ? "none" : "SAB".includes(g) ? "good" : g === "C" ? "warning" : g === "D" ? "serious" : "critical");\n  const verdict = (g) => ("SAB".includes(g) ? "\u2713 No corte do KPI (nota \u2265 B)" : "! Abaixo do corte do KPI (nota < B)");\n  const unitLabel = (u) => (u === "%" || u === "% apps" ? "%" : u === "/KLOC" ? "/KLOC" : u === "count" ? "" : u === "count regras" ? " regras" : "");\n\n  function fmtValue(c, v) {\n    if (v == null) return "\u2014";\n    if (typeof v === "string") return STATE[v] || v;\n    const unit = unitLabel(CRIT[c.id].unit);\n    return NF(Number.isInteger(v) ? 0 : 2).format(v) + unit;\n  }\n  function thresholds(id) {\n    const c = CRIT[id], u = unitLabel(c.unit);\n    const f = (x) => (typeof x === "string" ? STATE[x] || x : NF(Number.isInteger(x) ? 0 : 2).format(x) + u);\n    if (c.direction === "boolean") return `2 pts: ${f(c.points["2"])} \xB7 1 pt: ${f(c.points["1"])}`;\n    const sign = c.direction === "lower" ? "\u2264" : "\u2265";\n    return `2 pts: ${sign} ${f(c.points["2"])} \xB7 1 pt: ${sign} ${f(c.points["1"])}`;\n  }\n  const pill = (o) => {\n    if (o.state === "scored") {\n      const icon = o.points === 2 ? "\u2713" : o.points === 1 ? "!" : "\u2715";\n      return h("span", { class: `pill p${o.points}`, title: `${o.points} de 2 pontos` }, icon, ` ${o.points}/2`);\n    }\n    return h("span", { class: "pill pn" }, o.state === "unmeasured" ? "n\xE3o medido" : "N/A");\n  };\n\n  function evidenceItem(e) {\n    const copy = (t) => () => { try { navigator.clipboard.writeText(t); } catch (_) {} };\n    if (e.kind === "file") {\n      const loc = e.line ? `${e.path}:${e.line}` : e.path;\n      return h("li", {}, h("button", { class: "where", title: "copiar", onclick: copy(loc) }, loc), e.snippet && h("span", { class: "mono muted" }, e.snippet), e.note && h("span", { class: "why" }, e.note));\n    }\n    if (e.kind === "commit") return h("li", {}, h("button", { class: "where", onclick: copy(e.sha) }, `commit ${e.sha.slice(0, 8)}`), e.path && h("span", { class: "mono muted" }, e.path), e.note && h("span", { class: "why" }, e.note));\n    if (e.kind === "url") return h("li", {}, h("span", { class: "where" }, e.url), e.note && h("span", { class: "why" }, e.note));\n    return h("li", {}, h("span", { class: "where" }, `job ${e.name}`), e.note && h("span", { class: "why" }, e.note));\n  }\n\n  let filter = "scored";\n  const dimEls = [];\n\n  function critRow(o) {\n    const def = CRIT[o.id];\n    const detail = o.state === "scored" ? o.evidence : null;\n    const row = h("div", { class: `crit is-${o.state === "scored" ? "scored" : o.state === "unmeasured" ? "unmeasured" : "na"}`, "data-state": o.state, "data-points": o.state === "scored" ? o.points : "" });\n    const head = h("button", { class: "crit-row", "aria-expanded": "false", onclick: () => { const open = row.classList.toggle("open"); head.setAttribute("aria-expanded", open); } },\n      h("span", { class: "cid" }, o.id),\n      h("span", { class: "ctitle" }, def.title, def.blocking && h("span", { class: "gate", title: "crit\xE9rio bloqueante: com 0 ponto limita a nota a C" }, "gate"), o.state !== "scored" && h("small", {}, o.reason)),\n      h("span", { class: "cval" }, o.state === "scored" ? fmtValue(o, o.value) : ""),\n      pill(o),\n      h("span", { class: "chev" }, "\u203A"));\n    row.append(head);\n    const body = h("div", { class: "evid" });\n    if (detail) {\n      body.append(h("p", { class: "thr", style: "margin-left:0" }, `${thresholds(o.id)} \xB7 peso ${def.weight}`, o.zeroed_by ? ` \xB7 zerado por ${o.zeroed_by}` : "", o.confidence === "low" ? " \xB7 " : "", o.confidence === "low" ? h("span", { class: "low" }, "confian\xE7a baixa") : null));\n      body.append(h("ul", {}, detail.map(evidenceItem)));\n    } else {\n      body.append(h("p", { class: "thr", style: "margin-left:0" }, `${thresholds(o.id)} \xB7 peso ${def.weight} \xB7 fonte: ${def.sources.join(", ")}`));\n    }\n    row.append(body);\n    return row;\n  }\n\n  function applyFilter() {\n    document.querySelectorAll(".crit").forEach((el) => {\n      const st = el.dataset.state, pts = el.dataset.points;\n      el.hidden = !(filter === "all" || (filter === "scored" && st === "scored") || (filter === "low" && st === "scored" && pts !== "2") || (filter === "unmeasured" && st !== "scored"));\n    });\n  }\n\n  function dimension(d) {\n    if (!D.meta.selected_groups.includes(d.id)) {\n      return h("div", { class: "dim" }, h("div", { class: "dim-head", style: "cursor:default" },\n        h("span", { class: "dim-name muted" }, d.title, h("small", {}, `peso ${d.weight}`)),\n        h("span", { class: "bar-wrap" }, h("div", { class: "bar empty", title: "fora do escopo" })),\n        h("span", { class: "dim-count" }, D.meta.enabled_groups.includes(d.id) ? "fora do escopo" : "desativado"), h("span", {})));\n    }\n    const el = h("div", { class: "dim" });\n    const scored = d.criteria.filter((c) => c.state === "scored").length;\n    const applicable = d.criteria.filter((c) => c.state !== "not_applicable").length;\n    const bar = d.score_pct == null\n      ? h("div", { class: "bar empty", title: "nenhum crit\xE9rio medido" })\n      : h("div", { class: "bar", role: "img", "aria-label": `${d.title}: ${trunc(d.score_pct)}%` }, h("span", { style: `width:${d.score_pct}%` }), h("b", { style: `left:min(calc(${d.score_pct}% - 20px), calc(100% - 44px));right:auto` }, trunc(d.score_pct) + "%"));\n    const head = h("button", { class: "dim-head", "aria-expanded": "false", onclick: () => { const open = el.classList.toggle("open"); head.setAttribute("aria-expanded", open); } },\n      h("span", { class: "dim-name" }, d.title, h("small", {}, `peso ${d.weight}`)),\n      h("span", { class: "bar-wrap" }, bar),\n      h("span", { class: "dim-count" }, d.score_pct == null ? "sem crit\xE9rio medido" : `${scored} de ${applicable} crit\xE9rios medidos`),\n      h("span", { class: "chev" }, "\u203A"));\n    el.append(head, h("div", { class: "dim-body" }, d.criteria.map(critRow)));\n    dimEls.push(el);\n    return el;\n  }\n\n  function hero() {\n    const cov = R.coverage;\n    const partial = cov.ratio < 1;\n    const prev = D.previous, cmp = D.comparison;\n    let delta = null;\n    if (cmp.status === "ok" || cmp.status === "regression") {\n      const d = cmp.delta;\n      delta = h("div", { class: `delta ${d > 0.05 ? "up" : d < -0.05 ? "down" : ""}` }, `${d > 0.05 ? "\u25B2" : d < -0.05 ? "\u25BC" : "="} ${d > 0 ? "+" : ""}${NF(1).format(d)} pts vs. an\xE1lise anterior (${prev.grade || "\u2014"}, ${prev.total == null ? "\u2014" : trunc(prev.total)}${prev.commit ? ` \xB7 ${prev.commit}` : ""})`);\n    } else if (cmp.status === "rubric_changed" || cmp.status === "scope_changed") delta = h("div", { class: "delta" }, cmp.reason);\n    const F = D.final;\n    const pct = trunc(cov.weight_ratio * 100, 0);\n    const minPct = trunc(D.meta.min_coverage_for_grade * 100, 0);\n    const nodes = [h("div", { class: "card hero" },\n      h("div", { class: `grade ${gradeClass(F.grade)}`, role: "img", "aria-label": `Nota ${F.grade}` }, F.grade),\n      h("div", {}, h("div", { class: "total" }, R.total == null ? "\u2014" : trunc(R.total), h("small", {}, F.reason ? " / 100 nos crit\xE9rios medidos" : " / 100")),\n        h("div", { class: "verdict" }, verdict(F.grade), !F.reason && partial && h("span", { class: "tag" }, "provis\xF3ria"), F.reason && h("span", { class: "tag" }, "cobertura insuficiente")), delta),\n      h("div", {}, h("div", { class: "cov-title" }, h("span", {}, "Crit\xE9rios medidos"), h("b", {}, `${cov.measured} de ${cov.applicable}`)),\n        h("div", { class: "meter", role: "img", "aria-label": `${pct}% do peso medido` }, h("span", { style: `width:${cov.weight_ratio * 100}%` })),\n        h("div", { class: "muted", style: "font-size:13px" }, `${pct}% do peso do escopo avaliado (m\xEDnimo ${minPct}%)`)))];\n    if (R.blocked_by.length) nodes.push(h("div", { class: "banner danger", role: "alert" }, h("span", { class: "ic" }, "\u2715"), h("div", {}, h("strong", {}, "Gate acionado: "), R.blocked_by.map((id) => `${id} (${CRIT[id].title})`).join("; "), ". A nota fica limitada a C enquanto houver crit\xE9rio bloqueante em 0 ponto.")));\n    if (F.reason === "insufficient_coverage") nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota E por cobertura insuficiente. "), `S\xF3 ${pct}% do peso do escopo foi medido (m\xEDnimo ${minPct}%). Nos crit\xE9rios medidos a pontua\xE7\xE3o \xE9 ${R.total == null ? "\u2014" : trunc(R.total)}/100${F.computed_grade && F.computed_grade !== F.grade ? `, o que daria ${F.computed_grade}` : ""}. Sem medi\xE7\xE3o suficiente n\xE3o h\xE1 evid\xEAncia para uma nota maior; ela sobe conforme novos crit\xE9rios passam a ser medidos.`)));\n    else if (F.reason === "nothing_measured") nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota E: nenhum crit\xE9rio foi medido. "), "Escolha outros grupos ou verifique os avisos da an\xE1lise.")));\n    else if (partial) nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota provis\xF3ria. "), `${pct}% do peso do escopo foi medido. Crit\xE9rios n\xE3o medidos ficam fora do c\xE1lculo, ent\xE3o a nota pode mudar quando forem medidos. N\xE3o \xE9 equivalente \xE0 nota oficial.`)));\n    if (D.meta.selected_groups.length < D.meta.groups.length) nodes.push(h("div", { class: "banner" }, h("span", { class: "ic", style: "background:var(--grid)" }, "i"), h("div", {}, h("strong", {}, "Escopo parcial. "), `Avaliados: ${D.meta.groups.filter((g) => D.meta.selected_groups.includes(g.id)).map((g) => g.title).join(", ")}. Os demais grupos ficam fora do c\xE1lculo, e o total considera s\xF3 o peso dos grupos avaliados.`)));\n    if (D.meta.dirty) nodes.push(h("div", { class: "banner" }, h("span", { class: "ic", style: "background:var(--grid)" }, "i"), h("div", {}, "A an\xE1lise considera a working tree, incluindo altera\xE7\xF5es ainda n\xE3o commitadas.")));\n    return nodes;\n  }\n\n\n  /** Tabela do documento da rubrica (4.4): quais dimens\xF5es e crit\xE9rios participaram da nota e como o total sai. */\n  function composition() {\n    const sel = D.meta.selected_groups;\n    let sumW = 0, sumWS = 0;\n    const rows = DIMS.map((d) => {\n      const scored = d.criteria.filter((c) => c.state === "scored");\n      const applicable = d.criteria.filter((c) => c.state !== "not_applicable").length;\n      const inScope = sel.includes(d.id);\n      const took = inScope && d.score_pct != null;\n      if (took) { sumW += d.weight; sumWS += d.weight * d.score_pct; }\n      const why = !D.meta.enabled_groups.includes(d.id) ? "grupo desativado" : !inScope ? "fora do escopo escolhido" : d.score_pct == null ? "nenhum crit\xE9rio medido" : "";\n      return h("tr", { class: took ? "" : "out" },\n        h("td", {}, d.title),\n        h("td", { class: "num" }, String(d.weight)),\n        h("td", {}, h("span", { class: `part ${took ? "yes" : "no"}` }, h("i", { "aria-hidden": "true" }, took ? "\u2713" : "\u2013"), took ? "participou" : `n\xE3o participou \xB7 ${why}`)),\n        h("td", {}, took\n          ? [h("div", { class: "muted", style: "font-size:12.5px;margin-bottom:3px" }, `${scored.length} de ${applicable} crit\xE9rios`), h("div", { class: "ids" }, scored.map((c) => h("span", { title: CRIT[c.id].title }, c.id)))]\n          : h("div", { class: "ids" }, h("span", { class: "none" }, "\u2014"))),\n        h("td", { class: "num" }, took ? trunc(d.score_pct) + "%" : "\u2014"),\n        h("td", { class: "num" }, took ? NF(0).format(Math.floor(d.weight * d.score_pct)) : "\u2014"));\n    });\n    const total = sumW > 0 ? sumWS / sumW : null;\n    rows.push(h("tr", { class: "sum" },\n      h("td", {}, "Total"),\n      h("td", { class: "num" }, String(sumW)),\n      h("td", {}, ""), h("td", {}, ""),\n      h("td", { class: "num" }, total == null ? "\u2014" : trunc(total)),\n      h("td", { class: "num" }, NF(0).format(Math.floor(sumWS))) ));\n    const allW = DIMS.reduce((a, d) => a + d.weight, 0);\n    return h("div", { class: "card comp" }, h("h3", {}, "Composi\xE7\xE3o da nota"),\n      h("div", { class: "scroll" }, h("table", {},\n        h("thead", {}, h("tr", {}, h("th", {}, "Dimens\xE3o"), h("th", { class: "num" }, "Peso"), h("th", {}, "Participou da medi\xE7\xE3o?"), h("th", {}, "Crit\xE9rios que entraram"), h("th", { class: "num" }, "Score"), h("th", { class: "num" }, "Peso \xD7 score"))),\n        h("tbody", {}, rows))),\n      h("p", { class: "foot" }, `Total = \u03A3(peso \xD7 score) \xF7 \u03A3(pesos das dimens\xF5es que participaram) = ${NF(0).format(Math.floor(sumWS))} \xF7 ${sumW}${total == null ? "" : ` = ${trunc(total)}`}. Dimens\xE3o sem crit\xE9rio medido ou fora do escopo sai do divisor (${sumW} de ${allW} pontos de peso); dentro de cada dimens\xE3o, s\xF3 os crit\xE9rios medidos contam.`));\n  }\n\n  function opportunities() {\n    const list = D.opportunities.slice(0, 8);\n    if (!list.length) return h("p", { class: "muted" }, "Nenhum crit\xE9rio medido est\xE1 abaixo de 2 pontos.");\n    return h("div", { class: "card" }, list.map((o) => h("div", { class: "opp" },\n      h("span", { class: "cid" }, o.id),\n      h("span", {}, o.title, o.unblocks_gate && h("span", { class: "gate" }, "remove o gate")),\n      h("span", { class: "arrow" }, `${o.from_points} \u2192 2 pts`, o.grade_after && o.grade_after !== R.grade ? ` \xB7 letra medida ${R.grade || "\u2014"} \u2192 ${o.grade_after}` : ""),\n      h("span", { class: "gain" }, `+${NF(1).format(o.gain)}`))));\n  }\n\n\n  const KIND = { auto: "autom\xE1tica \xB7 0 tokens", guided: "guiada \xB7 o Claude redige", mixed: "mista \xB7 script + Claude", manual: "s\xF3 avisos" };\n  const tokFmt = (n) => NF(0).format(n);\n  function fixes() {\n    const list = D.fixes || [];\n    if (!list.length) return null;\n    const groupTitle = (id) => (D.meta.groups.find((g) => g.id === id) || {}).title || id;\n    const cards = list.map((f) => {\n      const missing = f.requires.filter((r) => !r.found);\n      return h("div", { class: "fix" },\n        h("div", { class: "fix-head" }, h("b", {}, f.title), h("span", { class: `chip ${f.kind}` }, KIND[f.kind] || f.kind), f.criteria.map((c) => h("span", { class: "chip mono" }, c)),\n          f.potential && h("span", { class: "gain", title: "teto: se os crit\xE9rios medidos abaixo de 2 chegarem a 2" }, `at\xE9 +${NF(1).format(f.potential.gain_total)} pts`)),\n        h("p", {}, f.summary),\n        h("div", { class: "meta2" },\n          (f.changes || f.guided_tasks) && h("span", {}, `escreve ${f.changes} arquivo(s)${f.guided_tasks ? ` + ${f.guided_tasks} tarefa(s) guiada(s)` : ""}`),\n          f.tokens && h("span", {}, `tokens \u2248 ${tokFmt(f.tokens.low)}\u2013${tokFmt(f.tokens.high)} (estimativa)`),\n          missing.length > 0 && h("span", { class: "warn2" }, `falta: ${missing.map((m) => m.tool + (m.blocking ? " (obrigat\xF3rio)" : "")).join(", ")}`)),\n        f.notes.slice(0, 2).map((n) => h("div", { class: "meta2" }, h("span", {}, "aviso: " + n))));\n    });\n    return h("div", {}, h("div", { class: "card" }, cards),\n      h("p", { class: "callout" }, "Nada \xE9 alterado por este relat\xF3rio. Para aplicar, pe\xE7a ", h("span", { class: "mono-inline" }, "/repo-score"), " e escolha o plano de melhoria: as mudan\xE7as v\xE3o para uma ", h("b", {}, "branch nova"), ", a nota \xE9 recalculada nela e voc\xEA decide o merge. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));\n  }\n  function panels() {\n    const list = D.panels || [];\n    if (!list.length) return null;\n    return list.map((p) => h("div", { class: "card", style: "margin-bottom:12px" },\n      h("div", { style: "font-weight:650;margin-bottom:6px" }, p.title),\n      p.items.map((i) => h("div", { class: "panel-item" }, h("span", { class: `st ${i.status}`, role: "img", "aria-label": i.status }, i.status === "ok" ? "\u2713" : i.status === "warn" ? "!" : i.status === "fail" ? "\u2715" : "i"), h("span", {}, i.label), h("span", { class: "sec" }, i.detail)))));\n  }\n\n  function notes() {\n    const unimpl = R.unmeasured.filter((u) => u.reason === D.meta.not_implemented_reason);\n    const other = R.unmeasured.filter((u) => u.reason !== D.meta.not_implemented_reason);\n    const out = [];\n    if (other.length) out.push(h("details", {}, h("summary", {}, `N\xE3o medidos por falta de fonte ou erro (${other.length})`), h("ul", { class: "reasons" }, other.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " \xB7 ", CRIT[u.id].title, " \u2014 ", u.reason)))));\n    if (unimpl.length) out.push(h("details", {}, h("summary", {}, `Aguardando coletor (${unimpl.length})`), h("p", { class: "muted", style: "font-size:13px;margin-top:6px" }, "Estes crit\xE9rios ainda n\xE3o t\xEAm medi\xE7\xE3o autom\xE1tica nesta vers\xE3o e ficam fora do c\xE1lculo."), h("ul", { class: "reasons" }, unimpl.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " \xB7 ", CRIT[u.id].title)))));\n    const na = R.not_applicable.filter((u) => u.reason !== D.meta.out_of_scope_reason);\n    if (na.length) out.push(h("details", {}, h("summary", {}, `N\xE3o aplic\xE1veis (${na.length})`), h("ul", { class: "reasons" }, na.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " \xB7 ", CRIT[u.id].title, " \u2014 ", u.reason)))));\n    if (D.evidence_issues.length) out.push(h("details", {}, h("summary", {}, `Evid\xEAncias descartadas na verifica\xE7\xE3o (${D.evidence_issues.length})`), h("p", { class: "muted", style: "font-size:13px;margin-top:6px" }, "Evid\xEAncia que n\xE3o confere com o repo \xE9 descartada; sem nenhuma v\xE1lida o crit\xE9rio vira n\xE3o medido."), h("ul", { class: "reasons" }, D.evidence_issues.map((i) => h("li", {}, h("span", { class: "mono" }, i.id), " \xB7 ", i.evidence.path || i.evidence.sha || i.evidence.name || "", " \u2014 ", i.reason)))));\n    if (R.errors.length) out.push(h("details", {}, h("summary", {}, `Erros de c\xE1lculo (${R.errors.length})`), h("ul", { class: "reasons" }, R.errors.map((e) => h("li", {}, h("span", { class: "mono" }, e.id), " \u2014 ", e.message)))));\n    return out.length ? h("div", { class: "card" }, out) : null;\n  }\n\n  function theme() {\n    const order = ["auto", "light", "dark"];\n    let cur = "auto";\n    try { cur = localStorage.getItem("repo-score-theme") || "auto"; } catch (_) {}\n    const apply = () => { if (cur === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", cur); btn.textContent = `Tema: ${cur === "auto" ? "autom\xE1tico" : cur === "light" ? "claro" : "escuro"}`; };\n    const btn = h("button", { class: "theme", onclick: () => { cur = order[(order.indexOf(cur) + 1) % 3]; try { localStorage.setItem("repo-score-theme", cur); } catch (_) {} apply(); } });\n    apply();\n    return btn;\n  }\n\n  const m = D.meta;\n  const app = document.getElementById("app");\n  document.title = `${m.repo} \xB7 nota ${D.final.grade} \xB7 Repo Score`;\n  const parts = [\n    h("header", {}, h("div", {}, h("h1", {}, m.repo), h("div", { class: "meta" }, m.branch && h("span", { class: "tag mono" }, `${m.branch}${m.commit ? "@" + m.commit : ""}${m.dirty ? " +altera\xE7\xF5es" : ""}`), h("span", {}, new Date(m.generated_at).toLocaleString("pt-BR")), h("span", {}, `rubrica ${m.rubric_version}`), m.policy_source && h("span", {}, "pol\xEDtica do repo aplicada"), m.selected_groups.length < m.groups.length && h("span", { class: "tag" }, "escopo parcial"))), theme()),\n    ...hero(),\n    composition(),\n    h("h2", {}, "Por dimens\xE3o"),\n    h("div", { class: "seg", role: "group", "aria-label": "Filtrar crit\xE9rios" }, [["scored", "Medidos"], ["low", "Abaixo de 2"], ["unmeasured", "N\xE3o medidos"], ["all", "Todos"]].map(([k, label]) =>\n      h("button", { "aria-pressed": String(k === filter), "data-f": k, onclick: (ev) => { filter = k; document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.f === k))); dimEls.forEach((d) => d.classList.add("open")); applyFilter(); } }, label))),\n    h("p", { class: "muted", style: "font-size:13px;margin:8px 0 12px" }, "Clique em um crit\xE9rio para ver limiares e evid\xEAncias; clique no caminho para copi\xE1-lo."),\n    h("div", { class: "card" }, DIMS.map(dimension)),\n    h("h2", {}, "O que mais sobe a nota"),\n    opportunities(),\n    fixes() && h("h2", {}, "Como subir a nota"),\n    fixes(),\n    panels() && h("h2", {}, "Sa\xFAde do processo"),\n    panels(),\n    h("h2", {}, "Detalhes da medi\xE7\xE3o"),\n    notes(),\n    h("footer", {}, `A nota \xE9 calculada por script a partir da rubrica ${m.rubric_version}; o Claude n\xE3o atribui pontos. Cada pontua\xE7\xE3o carrega evid\xEAncia verificada contra o reposit\xF3rio. Gerado por core-services-repo-score ${m.tool_version} \xB7 ${m.collectors.length} crit\xE9rios com coletor autom\xE1tico.`),\n  ];\n  app.append(...parts.flat().filter(Boolean));\n\n  dimEls.forEach((d) => { if (d.querySelector(\'.crit[data-state="scored"]\')) d.classList.add("open"); });\n  applyFilter();\n})();\n</script>\n</body>\n</html>\n';
+var report_default = '<!doctype html>\n<html lang="pt-BR">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Repo Score</title>\n<style>\n:root {\n  color-scheme: light;\n  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;\n  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,.10);\n  --series: #2a78d6; --series-soft: #cde2fb;\n  --good: #0ca30c; --good-ink: #006300; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;\n  --on-fill: #0b0b0b; --on-critical: #ffffff;\n  --cta: #1a66c4; --on-cta: #ffffff;\n  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n}\n@media (prefers-color-scheme: dark) {\n  :root:where(:not([data-theme="light"])) {\n    color-scheme: dark;\n    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;\n    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10);\n    --series: #3987e5; --series-soft: #184f95; --good-ink: #0ca30c;\n    --cta: #5a9cee; --on-cta: #0b0b0b;\n  }\n}\n:root[data-theme="dark"] {\n  color-scheme: dark;\n  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;\n  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10);\n  --series: #3987e5; --series-soft: #184f95; --good-ink: #0ca30c;\n  --cta: #5a9cee; --on-cta: #0b0b0b;\n}\n* { box-sizing: border-box; }\nbody { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }\nmain { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }\nh1, h2, h3, p { margin: 0; }\nh2 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 36px 0 12px; }\n.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 20px; }\n.muted { color: var(--muted); } .sec { color: var(--ink-2); }\n.mono { font-family: var(--mono); font-size: 13px; }\n[hidden] { display: none !important; }\nbutton { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }\nbutton:focus-visible { outline: 2px solid var(--series); outline-offset: 2px; border-radius: 6px; }\n\nheader { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }\nheader h1 { font-size: 22px; font-weight: 650; }\nheader .meta { color: var(--ink-2); font-size: 13px; margin-top: 4px; display: flex; gap: 6px 14px; flex-wrap: wrap; }\n.tag { border: 1px solid var(--ring); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--ink-2); }\n.theme { border: 1px solid var(--ring); border-radius: 8px; padding: 6px 12px; font-size: 13px; color: var(--ink-2); background: var(--surface); }\n\n.hero { display: grid; grid-template-columns: auto 1fr minmax(240px, 320px); gap: 28px; align-items: center; margin-top: 20px; }\n.grade { width: 108px; height: 108px; border-radius: 22px; display: grid; place-items: center; font-size: 64px; font-weight: 700; line-height: 1; }\n.grade.good { background: var(--good); color: #fff; } .grade.warning { background: var(--warning); color: var(--on-fill); }\n.grade.serious { background: var(--serious); color: var(--on-fill); } .grade.critical { background: var(--critical); color: var(--on-critical); }\n.grade.none { background: var(--grid); color: var(--muted); }\n.total { font-size: 40px; font-weight: 650; letter-spacing: -.02em; }\n.total small { font-size: 18px; font-weight: 500; color: var(--muted); }\n.verdict { margin-top: 2px; font-size: 14px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; }\n.delta { margin-top: 8px; font-size: 14px; }\n.delta.up { color: var(--good-ink); } .delta.down { color: var(--critical); }\n.meter { height: 10px; background: var(--grid); border-radius: 5px; overflow: hidden; margin: 8px 0 6px; }\n.meter > span { display: block; height: 100%; background: var(--series); border-radius: 5px; }\n.cov-title { font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px; }\n\n.banner { display: flex; gap: 12px; align-items: flex-start; border-radius: 10px; padding: 12px 14px; margin-top: 14px; font-size: 14px; border: 1px solid var(--ring); background: var(--surface); }\n.banner .ic { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; }\n.banner.warn .ic { background: var(--warning); color: var(--on-fill); }\n.banner.danger { border-color: var(--critical); } .banner.danger .ic { background: var(--critical); color: #fff; }\n.banner strong { font-weight: 650; }\n\n.dim { border-top: 1px solid var(--grid); }\n.dim:first-child { border-top: 0; }\n.dim-head { display: grid; grid-template-columns: minmax(150px, 230px) 1fr 150px 18px; gap: 16px; align-items: center; width: 100%; padding: 12px 0; }\n.dim-name { font-weight: 600; } .dim-name small { font-weight: 400; color: var(--muted); margin-left: 6px; }\n.bar { position: relative; height: 12px; background: var(--grid); border-radius: 6px; }\n.bar > span { position: absolute; inset: 0 auto 0 0; background: var(--series); border-radius: 0 6px 6px 0; min-width: 2px; }\n.bar > b { position: absolute; right: 0; top: -22px; font-size: 13px; font-weight: 600; }\n.bar.empty { background: transparent; border: 1px dashed var(--axis); }\n.dim-count { font-size: 13px; color: var(--ink-2); text-align: right; }\n.chev { color: var(--muted); transition: transform .15s; } .dim.open .chev { transform: rotate(90deg); }\n.dim-body { display: none; padding: 4px 0 16px; } .dim.open .dim-body { display: block; }\n\n.seg { display: inline-flex; border: 1px solid var(--ring); border-radius: 8px; overflow: hidden; background: var(--surface); }\n.seg button { padding: 6px 12px; font-size: 13px; color: var(--ink-2); border-right: 1px solid var(--ring); }\n.seg button:last-child { border-right: 0; }\n.seg button[aria-pressed="true"] { background: var(--series); color: #fff; }\n\n.crit { border-top: 1px solid var(--grid); }\n.crit-row { display: grid; grid-template-columns: 44px 1fr 150px 92px 26px; gap: 12px; align-items: center; width: 100%; padding: 9px 0; }\n.cid { font-family: var(--mono); font-size: 12px; background: var(--grid); border-radius: 5px; padding: 2px 6px; text-align: center; }\n.ctitle small { display: block; color: var(--muted); font-size: 12px; }\n.cval { font-size: 13px; color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }\n.pill { display: inline-flex; gap: 5px; align-items: center; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; font-weight: 600; white-space: nowrap; justify-content: center; }\n.pill.p2 { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good-ink); }\n.pill.p1 { background: color-mix(in srgb, var(--warning) 28%, transparent); color: var(--ink); }\n.pill.p0 { background: color-mix(in srgb, var(--critical) 18%, transparent); color: var(--critical); }\n.pill.pn { background: var(--grid); color: var(--muted); }\n.gate { font-size: 11px; border: 1px solid var(--critical); color: var(--critical); border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }\n.crit.is-unmeasured .ctitle, .crit.is-na .ctitle { color: var(--muted); }\n.evid { display: none; padding: 2px 0 12px 56px; }\n.crit.open .evid { display: block; }\n.evid ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }\n.evid li { font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }\n.evid .where { font-family: var(--mono); font-size: 12.5px; color: var(--ink); background: none; border-bottom: 1px dotted var(--axis); cursor: copy; }\n.evid .why { color: var(--muted); }\n.thr { font-size: 12.5px; color: var(--muted); margin: 0 0 8px 56px; }\n.low { font-size: 11px; border: 1px solid var(--warning); border-radius: 4px; padding: 0 5px; color: var(--ink-2); }\n\n.opp { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--grid); }\n.opp:first-child { border-top: 0; }\n.gain { font-weight: 650; color: var(--good-ink); font-variant-numeric: tabular-nums; }\n.arrow { font-size: 13px; color: var(--ink-2); white-space: nowrap; }\n\ndetails { border-top: 1px solid var(--grid); padding: 10px 0; } details:first-child { border-top: 0; }\nsummary { cursor: pointer; font-weight: 600; font-size: 14px; }\n.reasons { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }\nfooter { margin-top: 40px; font-size: 13px; color: var(--muted); }\n\n@media (max-width: 760px) {\n  .hero { grid-template-columns: 1fr; justify-items: start; }\n  .dim-head { grid-template-columns: 1fr 18px; } .dim-head .bar-wrap, .dim-head .dim-count { grid-column: 1 / -1; text-align: left; }\n  .dim-head .bar-wrap { margin-top: 18px; }\n  .crit-row { grid-template-columns: 44px 1fr 26px; } .crit-row .cval, .crit-row .pill { grid-column: 2; justify-self: start; }\n  .evid, .thr { padding-left: 0; margin-left: 0; }\n  .opp { grid-template-columns: 44px 1fr; } .opp .gain, .opp .arrow { grid-column: 2; }\n}\n\n.fix { display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 14px 28px; border-top: 1px solid var(--grid); padding: 20px 0; align-items: center; }\n.fix:first-child { border-top: 0; padding-top: 4px; }\n.fix:last-child { padding-bottom: 4px; }\n.fix-head { display: flex; gap: 8px 10px; align-items: center; flex-wrap: wrap; }\n.fix-head b { font-weight: 650; font-size: 16px; }\n.chip { font-size: 12px; border: 1px solid var(--ring); border-radius: 999px; padding: 1px 9px; color: var(--ink-2); white-space: nowrap; }\n.chip.auto { border-color: var(--good); color: var(--good-ink); }\n.chip.guided, .chip.mixed { border-color: var(--warning); }\n.chip.top { background: var(--cta); border-color: var(--cta); color: var(--on-cta); font-weight: 600; }\n.fix p { margin: 6px 0 0; color: var(--ink-2); font-size: 14px; }\n.fix .meta2 { display: flex; gap: 4px 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }\n.fix .warn2 { color: var(--ink); }\n.fix details.note { border: 0; padding: 6px 0 0; font-size: 13px; color: var(--muted); }\n.fix details.note summary { font-weight: 400; font-size: 13px; }\n.fix details.note div { margin-top: 4px; overflow-wrap: anywhere; }\n.fix-cta { display: grid; gap: 8px; justify-items: stretch; text-align: center; padding: 14px; border: 1px solid var(--ring); border-radius: 12px; background: var(--page); }\n.fix-cta .gain-big { display: grid; line-height: 1.15; }\n.fix-cta .gain-big b { font-size: 26px; font-weight: 700; color: var(--good-ink); font-variant-numeric: tabular-nums; }\n.fix-cta .gain-big span { font-size: 12px; color: var(--muted); }\n.btn-cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; border: 0; border-radius: 10px; padding: 11px 16px; background: var(--cta); color: var(--on-cta); box-shadow: 0 1px 2px rgba(0,0,0,.18); transition: transform .08s ease, filter .15s ease; }\n.btn-cta:hover { filter: brightness(1.08); } .btn-cta:active { transform: translateY(1px); }\n.btn-cta:focus-visible { outline: 3px solid var(--series-soft); outline-offset: 2px; }\n.btn-cta svg { width: 17px; height: 17px; flex: none; }\n.btn-cta.done { background: var(--good); color: #fff; }\n.fix-cta .hint { font-size: 12px; color: var(--muted); }\n.fix-cta.plain { align-content: center; font-size: 13px; color: var(--muted); }\n.fix-cmd { grid-column: 1 / -1; border: 1px solid var(--ring); border-radius: 10px; background: var(--page); padding: 12px 14px; }\n.fix-cmd ol { margin: 0 0 8px; padding-left: 20px; font-size: 13px; color: var(--ink-2); }\n.fix-cmd pre { margin: 0; white-space: pre-wrap; font-family: var(--mono); font-size: 12.5px; background: var(--grid); border-radius: 8px; padding: 10px 12px; user-select: all; }\n@media (max-width: 760px) { .fix { grid-template-columns: 1fr; } }\n.panel-item { display: grid; grid-template-columns: 26px 200px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--grid); font-size: 14px; align-items: baseline; }\n.panel-item:first-of-type { border-top: 0; }\n.st { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; }\n.st.ok { background: var(--good); color: #fff; } .st.warn { background: var(--warning); color: var(--on-fill); }\n.st.fail { background: var(--critical); color: #fff; } .st.info { background: var(--grid); color: var(--ink-2); }\n.callout { font-size: 13px; color: var(--ink-2); margin-top: 12px; }\n.callout code, .mono-inline { font-family: var(--mono); font-size: 12.5px; background: var(--grid); border-radius: 4px; padding: 1px 5px; }\n@media (max-width: 760px) { .panel-item { grid-template-columns: 26px 1fr; } .panel-item span:last-child { grid-column: 2; color: var(--muted); } }\n\n.comp { margin-top: 14px; }\n.comp h3 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 8px; }\n.comp .scroll { overflow-x: auto; }\n.comp table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }\n.comp th, .comp td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--grid); vertical-align: top; }\n.comp th { font-size: 12px; font-weight: 600; color: var(--muted); border-top: 0; white-space: nowrap; }\n.comp td.num, .comp th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }\n.comp tr.out td { color: var(--muted); }\n.comp tr.sum td { font-weight: 650; border-top: 2px solid var(--axis); }\n.comp .ids { display: flex; flex-wrap: wrap; gap: 3px 4px; }\n.comp .ids span { font-family: var(--mono); font-size: 11.5px; background: var(--grid); border-radius: 4px; padding: 0 5px; }\n.comp .ids span.none { background: transparent; color: var(--muted); font-family: inherit; padding: 0; }\n.part { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }\n.part i { font-style: normal; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; }\n.part.yes i { background: var(--good); color: #fff; } .part.no i { background: var(--grid); color: var(--ink-2); }\n.comp .foot { font-size: 12.5px; color: var(--muted); margin-top: 8px; }\n@media print { .theme, .seg { display: none; } body { background: #fff; } }\n</style>\n</head>\n<body>\n<main id="app"></main>\n<script id="data" type="application/json">__REPORT_DATA__</script>\n<script>\n(() => {\n  const D = JSON.parse(document.getElementById("data").textContent);\n  const R = D.result;\n  const DIMS = Object.values(R.dimensions);\n  const CRIT = D.criteria;\n  const NF = (d) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });\n  const trunc = (n, d = 1) => NF(d).format(Math.floor(n * 10 ** d + 1e-9) / 10 ** d); // nunca arredonda para cima\n  const STATE = { locked: "com lock e modo locked", present: "presente", absent: "ausente", none: "nenhum", "build+test": "build + testes", build: "s\xF3 build",\n    gating: "bloqueante", "non-blocking": "sem bloquear", "c1+c2": "C1 + C2", partial: "parcial", recent: "atualizado \u2264 12 meses", owners: "com code owners",\n    approval: "\u2265 1 aprova\xE7\xE3o", "present+no-divergence": "presente, sem diverg\xEAncia", "configured+required": "configurado e obrigat\xF3rio", configured: "configurado" };\n\n  // cria\xE7\xE3o de DOM: todo texto vem por textContent (nomes de arquivo e trechos do repo n\xE3o s\xE3o confi\xE1veis)\n  function h(tag, attrs, ...kids) {\n    const el = document.createElement(tag);\n    for (const [k, v] of Object.entries(attrs || {})) {\n      if (v == null || v === false) continue;\n      if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v);\n    }\n    for (const k of kids.flat()) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(String(k)));\n    return el;\n  }\n  const gradeClass = (g) => (!g ? "none" : "SAB".includes(g) ? "good" : g === "C" ? "warning" : g === "D" ? "serious" : "critical");\n  const verdict = (g) => ("SAB".includes(g) ? "\u2713 No corte do KPI (nota \u2265 B)" : "! Abaixo do corte do KPI (nota < B)");\n  const unitLabel = (u) => (u === "%" || u === "% apps" ? "%" : u === "/KLOC" ? "/KLOC" : u === "count" ? "" : u === "count regras" ? " regras" : "");\n\n  function fmtValue(c, v) {\n    if (v == null) return "\u2014";\n    if (typeof v === "string") return STATE[v] || v;\n    const unit = unitLabel(CRIT[c.id].unit);\n    return NF(Number.isInteger(v) ? 0 : 2).format(v) + unit;\n  }\n  function thresholds(id) {\n    const c = CRIT[id], u = unitLabel(c.unit);\n    const f = (x) => (typeof x === "string" ? STATE[x] || x : NF(Number.isInteger(x) ? 0 : 2).format(x) + u);\n    if (c.direction === "boolean") return `2 pts: ${f(c.points["2"])} \xB7 1 pt: ${f(c.points["1"])}`;\n    const sign = c.direction === "lower" ? "\u2264" : "\u2265";\n    return `2 pts: ${sign} ${f(c.points["2"])} \xB7 1 pt: ${sign} ${f(c.points["1"])}`;\n  }\n  const pill = (o) => {\n    if (o.state === "scored") {\n      const icon = o.points === 2 ? "\u2713" : o.points === 1 ? "!" : "\u2715";\n      return h("span", { class: `pill p${o.points}`, title: `${o.points} de 2 pontos` }, icon, ` ${o.points}/2`);\n    }\n    return h("span", { class: "pill pn" }, o.state === "unmeasured" ? "n\xE3o medido" : "N/A");\n  };\n\n  function evidenceItem(e) {\n    const copy = (t) => () => { try { navigator.clipboard.writeText(t); } catch (_) {} };\n    if (e.kind === "file") {\n      const loc = e.line ? `${e.path}:${e.line}` : e.path;\n      return h("li", {}, h("button", { class: "where", title: "copiar", onclick: copy(loc) }, loc), e.snippet && h("span", { class: "mono muted" }, e.snippet), e.note && h("span", { class: "why" }, e.note));\n    }\n    if (e.kind === "commit") return h("li", {}, h("button", { class: "where", onclick: copy(e.sha) }, `commit ${e.sha.slice(0, 8)}`), e.path && h("span", { class: "mono muted" }, e.path), e.note && h("span", { class: "why" }, e.note));\n    if (e.kind === "url") return h("li", {}, h("span", { class: "where" }, e.url), e.note && h("span", { class: "why" }, e.note));\n    return h("li", {}, h("span", { class: "where" }, `job ${e.name}`), e.note && h("span", { class: "why" }, e.note));\n  }\n\n  let filter = "scored";\n  const dimEls = [];\n\n  function critRow(o) {\n    const def = CRIT[o.id];\n    const detail = o.state === "scored" ? o.evidence : null;\n    const row = h("div", { class: `crit is-${o.state === "scored" ? "scored" : o.state === "unmeasured" ? "unmeasured" : "na"}`, "data-state": o.state, "data-points": o.state === "scored" ? o.points : "" });\n    const head = h("button", { class: "crit-row", "aria-expanded": "false", onclick: () => { const open = row.classList.toggle("open"); head.setAttribute("aria-expanded", open); } },\n      h("span", { class: "cid" }, o.id),\n      h("span", { class: "ctitle" }, def.title, def.blocking && h("span", { class: "gate", title: "crit\xE9rio bloqueante: com 0 ponto limita a nota a C" }, "gate"), o.state !== "scored" && h("small", {}, o.reason)),\n      h("span", { class: "cval" }, o.state === "scored" ? fmtValue(o, o.value) : ""),\n      pill(o),\n      h("span", { class: "chev" }, "\u203A"));\n    row.append(head);\n    const body = h("div", { class: "evid" });\n    if (detail) {\n      body.append(h("p", { class: "thr", style: "margin-left:0" }, `${thresholds(o.id)} \xB7 peso ${def.weight}`, o.zeroed_by ? ` \xB7 zerado por ${o.zeroed_by}` : "", o.confidence === "low" ? " \xB7 " : "", o.confidence === "low" ? h("span", { class: "low" }, "confian\xE7a baixa") : null));\n      body.append(h("ul", {}, detail.map(evidenceItem)));\n    } else {\n      body.append(h("p", { class: "thr", style: "margin-left:0" }, `${thresholds(o.id)} \xB7 peso ${def.weight} \xB7 fonte: ${def.sources.join(", ")}`));\n    }\n    row.append(body);\n    return row;\n  }\n\n  function applyFilter() {\n    document.querySelectorAll(".crit").forEach((el) => {\n      const st = el.dataset.state, pts = el.dataset.points;\n      el.hidden = !(filter === "all" || (filter === "scored" && st === "scored") || (filter === "low" && st === "scored" && pts !== "2") || (filter === "unmeasured" && st !== "scored"));\n    });\n  }\n\n  function dimension(d) {\n    if (!D.meta.selected_groups.includes(d.id)) {\n      return h("div", { class: "dim" }, h("div", { class: "dim-head", style: "cursor:default" },\n        h("span", { class: "dim-name muted" }, d.title, h("small", {}, `peso ${d.weight}`)),\n        h("span", { class: "bar-wrap" }, h("div", { class: "bar empty", title: "fora do escopo" })),\n        h("span", { class: "dim-count" }, D.meta.enabled_groups.includes(d.id) ? "fora do escopo" : "desativado"), h("span", {})));\n    }\n    const el = h("div", { class: "dim" });\n    const scored = d.criteria.filter((c) => c.state === "scored").length;\n    const applicable = d.criteria.filter((c) => c.state !== "not_applicable").length;\n    const bar = d.score_pct == null\n      ? h("div", { class: "bar empty", title: "nenhum crit\xE9rio medido" })\n      : h("div", { class: "bar", role: "img", "aria-label": `${d.title}: ${trunc(d.score_pct)}%` }, h("span", { style: `width:${d.score_pct}%` }), h("b", { style: `left:min(calc(${d.score_pct}% - 20px), calc(100% - 44px));right:auto` }, trunc(d.score_pct) + "%"));\n    const head = h("button", { class: "dim-head", "aria-expanded": "false", onclick: () => { const open = el.classList.toggle("open"); head.setAttribute("aria-expanded", open); } },\n      h("span", { class: "dim-name" }, d.title, h("small", {}, `peso ${d.weight}`)),\n      h("span", { class: "bar-wrap" }, bar),\n      h("span", { class: "dim-count" }, d.score_pct == null ? "sem crit\xE9rio medido" : `${scored} de ${applicable} crit\xE9rios medidos`),\n      h("span", { class: "chev" }, "\u203A"));\n    el.append(head, h("div", { class: "dim-body" }, d.criteria.map(critRow)));\n    dimEls.push(el);\n    return el;\n  }\n\n  function hero() {\n    const cov = R.coverage;\n    const partial = cov.ratio < 1;\n    const prev = D.previous, cmp = D.comparison;\n    let delta = null;\n    if (cmp.status === "ok" || cmp.status === "regression") {\n      const d = cmp.delta;\n      delta = h("div", { class: `delta ${d > 0.05 ? "up" : d < -0.05 ? "down" : ""}` }, `${d > 0.05 ? "\u25B2" : d < -0.05 ? "\u25BC" : "="} ${d > 0 ? "+" : ""}${NF(1).format(d)} pts vs. an\xE1lise anterior (${prev.grade || "\u2014"}, ${prev.total == null ? "\u2014" : trunc(prev.total)}${prev.commit ? ` \xB7 ${prev.commit}` : ""})`);\n    } else if (cmp.status === "rubric_changed" || cmp.status === "scope_changed") delta = h("div", { class: "delta" }, cmp.reason);\n    const F = D.final;\n    const pct = trunc(cov.weight_ratio * 100, 0);\n    const minPct = trunc(D.meta.min_coverage_for_grade * 100, 0);\n    const nodes = [h("div", { class: "card hero" },\n      h("div", { class: `grade ${gradeClass(F.grade)}`, role: "img", "aria-label": `Nota ${F.grade}` }, F.grade),\n      h("div", {}, h("div", { class: "total" }, R.total == null ? "\u2014" : trunc(R.total), h("small", {}, F.reason ? " / 100 nos crit\xE9rios medidos" : " / 100")),\n        h("div", { class: "verdict" }, verdict(F.grade), !F.reason && partial && h("span", { class: "tag" }, "provis\xF3ria"), F.reason && h("span", { class: "tag" }, "cobertura insuficiente")), delta),\n      h("div", {}, h("div", { class: "cov-title" }, h("span", {}, "Crit\xE9rios medidos"), h("b", {}, `${cov.measured} de ${cov.applicable}`)),\n        h("div", { class: "meter", role: "img", "aria-label": `${pct}% do peso medido` }, h("span", { style: `width:${cov.weight_ratio * 100}%` })),\n        h("div", { class: "muted", style: "font-size:13px" }, `${pct}% do peso do escopo avaliado (m\xEDnimo ${minPct}%)`)))];\n    if (R.blocked_by.length) nodes.push(h("div", { class: "banner danger", role: "alert" }, h("span", { class: "ic" }, "\u2715"), h("div", {}, h("strong", {}, "Gate acionado: "), R.blocked_by.map((id) => `${id} (${CRIT[id].title})`).join("; "), ". A nota fica limitada a C enquanto houver crit\xE9rio bloqueante em 0 ponto.")));\n    if (F.reason === "insufficient_coverage") nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota E por cobertura insuficiente. "), `S\xF3 ${pct}% do peso do escopo foi medido (m\xEDnimo ${minPct}%). Nos crit\xE9rios medidos a pontua\xE7\xE3o \xE9 ${R.total == null ? "\u2014" : trunc(R.total)}/100${F.computed_grade && F.computed_grade !== F.grade ? `, o que daria ${F.computed_grade}` : ""}. Sem medi\xE7\xE3o suficiente n\xE3o h\xE1 evid\xEAncia para uma nota maior; ela sobe conforme novos crit\xE9rios passam a ser medidos.`)));\n    else if (F.reason === "nothing_measured") nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota E: nenhum crit\xE9rio foi medido. "), "Escolha outros grupos ou verifique os avisos da an\xE1lise.")));\n    else if (partial) nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota provis\xF3ria. "), `${pct}% do peso do escopo foi medido. Crit\xE9rios n\xE3o medidos ficam fora do c\xE1lculo, ent\xE3o a nota pode mudar quando forem medidos. N\xE3o \xE9 equivalente \xE0 nota oficial.`)));\n    if (D.meta.selected_groups.length < D.meta.groups.length) nodes.push(h("div", { class: "banner" }, h("span", { class: "ic", style: "background:var(--grid)" }, "i"), h("div", {}, h("strong", {}, "Escopo parcial. "), `Avaliados: ${D.meta.groups.filter((g) => D.meta.selected_groups.includes(g.id)).map((g) => g.title).join(", ")}. Os demais grupos ficam fora do c\xE1lculo, e o total considera s\xF3 o peso dos grupos avaliados.`)));\n    if (D.meta.dirty) nodes.push(h("div", { class: "banner" }, h("span", { class: "ic", style: "background:var(--grid)" }, "i"), h("div", {}, "A an\xE1lise considera a working tree, incluindo altera\xE7\xF5es ainda n\xE3o commitadas.")));\n    return nodes;\n  }\n\n\n  /** Tabela do documento da rubrica (4.4): quais dimens\xF5es e crit\xE9rios participaram da nota e como o total sai. */\n  function composition() {\n    const sel = D.meta.selected_groups;\n    let sumW = 0, sumWS = 0;\n    const rows = DIMS.map((d) => {\n      const scored = d.criteria.filter((c) => c.state === "scored");\n      const applicable = d.criteria.filter((c) => c.state !== "not_applicable").length;\n      const inScope = sel.includes(d.id);\n      const took = inScope && d.score_pct != null;\n      if (took) { sumW += d.weight; sumWS += d.weight * d.score_pct; }\n      const why = !D.meta.enabled_groups.includes(d.id) ? "grupo desativado" : !inScope ? "fora do escopo escolhido" : d.score_pct == null ? "nenhum crit\xE9rio medido" : "";\n      return h("tr", { class: took ? "" : "out" },\n        h("td", {}, d.title),\n        h("td", { class: "num" }, String(d.weight)),\n        h("td", {}, h("span", { class: `part ${took ? "yes" : "no"}` }, h("i", { "aria-hidden": "true" }, took ? "\u2713" : "\u2013"), took ? "participou" : `n\xE3o participou \xB7 ${why}`)),\n        h("td", {}, took\n          ? [h("div", { class: "muted", style: "font-size:12.5px;margin-bottom:3px" }, `${scored.length} de ${applicable} crit\xE9rios`), h("div", { class: "ids" }, scored.map((c) => h("span", { title: CRIT[c.id].title }, c.id)))]\n          : h("div", { class: "ids" }, h("span", { class: "none" }, "\u2014"))),\n        h("td", { class: "num" }, took ? trunc(d.score_pct) + "%" : "\u2014"),\n        h("td", { class: "num" }, took ? NF(0).format(Math.floor(d.weight * d.score_pct)) : "\u2014"));\n    });\n    const total = sumW > 0 ? sumWS / sumW : null;\n    rows.push(h("tr", { class: "sum" },\n      h("td", {}, "Total"),\n      h("td", { class: "num" }, String(sumW)),\n      h("td", {}, ""), h("td", {}, ""),\n      h("td", { class: "num" }, total == null ? "\u2014" : trunc(total)),\n      h("td", { class: "num" }, NF(0).format(Math.floor(sumWS))) ));\n    const allW = DIMS.reduce((a, d) => a + d.weight, 0);\n    return h("div", { class: "card comp" }, h("h3", {}, "Composi\xE7\xE3o da nota"),\n      h("div", { class: "scroll" }, h("table", {},\n        h("thead", {}, h("tr", {}, h("th", {}, "Dimens\xE3o"), h("th", { class: "num" }, "Peso"), h("th", {}, "Participou da medi\xE7\xE3o?"), h("th", {}, "Crit\xE9rios que entraram"), h("th", { class: "num" }, "Score"), h("th", { class: "num" }, "Peso \xD7 score"))),\n        h("tbody", {}, rows))),\n      h("p", { class: "foot" }, `Total = \u03A3(peso \xD7 score) \xF7 \u03A3(pesos das dimens\xF5es que participaram) = ${NF(0).format(Math.floor(sumWS))} \xF7 ${sumW}${total == null ? "" : ` = ${trunc(total)}`}. Dimens\xE3o sem crit\xE9rio medido ou fora do escopo sai do divisor (${sumW} de ${allW} pontos de peso); dentro de cada dimens\xE3o, s\xF3 os crit\xE9rios medidos contam.`));\n  }\n\n  function opportunities() {\n    const list = D.opportunities.slice(0, 8);\n    if (!list.length) return h("p", { class: "muted" }, "Nenhum crit\xE9rio medido est\xE1 abaixo de 2 pontos.");\n    return h("div", { class: "card" }, list.map((o) => h("div", { class: "opp" },\n      h("span", { class: "cid" }, o.id),\n      h("span", {}, o.title, o.unblocks_gate && h("span", { class: "gate" }, "remove o gate")),\n      h("span", { class: "arrow" }, `${o.from_points} \u2192 2 pts`, o.grade_after && o.grade_after !== R.grade ? ` \xB7 letra medida ${R.grade || "\u2014"} \u2192 ${o.grade_after}` : ""),\n      h("span", { class: "gain" }, `+${NF(1).format(o.gain)}`))));\n  }\n\n\n  const KIND = { auto: "autom\xE1tica \xB7 0 tokens", guided: "guiada \xB7 o Claude redige", mixed: "mista \xB7 script + Claude", manual: "s\xF3 avisos" };\n  const tokFmt = (n) => NF(0).format(n);\n  /** \xCDcone de raio (SVG inline); o DOM de SVG precisa do namespace pr\xF3prio. */\n  function boltIcon() {\n    const ns = "http://www.w3.org/2000/svg";\n    const svg = document.createElementNS(ns, "svg");\n    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("aria-hidden", "true");\n    const path = document.createElementNS(ns, "path");\n    path.setAttribute("d", "M13 2 4 14h6l-1 8 9-12h-6z"); path.setAttribute("fill", "currentColor");\n    svg.append(path);\n    return svg;\n  }\n  /** Bot\xE3o "Otimizar nota": copia o comando que inicia a corre\xE7\xE3o deste ponto na sess\xE3o do Claude (o relat\xF3rio \xE9 est\xE1tico e n\xE3o fala com a sess\xE3o). */\n  function optimizeCta(f, cmdBox) {\n    const label = h("span", {}, "Otimizar nota");\n    const btn = h("button", { class: "btn-cta", type: "button", "aria-describedby": "opt-" + f.id }, boltIcon(), label);\n    btn.onclick = () => {\n      let ok = false;\n      try { navigator.clipboard.writeText(f.prompt); ok = true; } catch (_) {}\n      if (!ok) { try { const r = document.createRange(); r.selectNodeContents(cmdBox.querySelector("pre")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); ok = document.execCommand("copy"); sel.removeAllRanges(); } catch (_) {} }\n      cmdBox.hidden = false;\n      label.textContent = ok ? "Comando copiado" : "Copie o comando abaixo";\n      btn.classList.toggle("done", ok);\n      if (ok) setTimeout(() => { label.textContent = "Copiar de novo"; }, 2500);\n      cmdBox.scrollIntoView({ block: "nearest", behavior: "smooth" });\n    };\n    return btn;\n  }\n  function fixes() {\n    const list = D.fixes || [];\n    if (!list.length) return h("p", { class: "muted" }, D.opportunities.length ? "Nenhuma corre\xE7\xE3o autom\xE1tica dispon\xEDvel para os crit\xE9rios abaixo de 2 pontos." : "Todos os crit\xE9rios medidos j\xE1 est\xE3o na pontua\xE7\xE3o m\xE1xima: n\xE3o h\xE1 nada a otimizar.");\n    const groupTitle = (id) => (D.meta.groups.find((g) => g.id === id) || {}).title || id;\n    const topId = list.filter((f) => f.prompt && f.potential).sort((x, y) => y.potential.gain_total - x.potential.gain_total)[0]?.id;\n    const cards = list.map((f) => {\n      const missing = f.requires.filter((r) => !r.found);\n      const cmdBox = f.prompt ? h("div", { class: "fix-cmd", id: "opt-" + f.id, hidden: "" },\n        h("ol", {}, h("li", {}, "Cole o comando na sess\xE3o do Claude e envie."), h("li", {}, "O Claude mostra o custo em tokens e pede a sua confirma\xE7\xE3o antes de alterar qualquer coisa."), h("li", {}, "As mudan\xE7as v\xE3o para a branch nova da sess\xE3o (a mesma para todos os bot\xF5es); o merge \xE9 decis\xE3o sua.")),\n        h("pre", {}, f.prompt)) : null;\n      const gain = f.potential ? h("div", { class: "gain-big", title: "teto: se os crit\xE9rios medidos abaixo de 2 chegarem a 2" }, h("span", {}, "ganho potencial"), h("b", {}, `at\xE9 +${NF(1).format(f.potential.gain_total)} pts`)) : null;\n      const cta = f.prompt\n        ? h("div", { class: "fix-cta" }, gain, optimizeCta(f, cmdBox), h("span", { class: "hint" }, f.tokens ? `\u2248 ${tokFmt(f.tokens.low)}\u2013${tokFmt(f.tokens.high)} tokens \xB7 branch nova` : "0 tokens \xB7 branch nova"))\n        : h("div", { class: "fix-cta plain" }, "S\xF3 avisos: n\xE3o h\xE1 corre\xE7\xE3o autom\xE1tica a iniciar.");\n      return h("div", { class: "fix" },\n        h("div", {},\n          h("div", { class: "fix-head" }, h("b", {}, f.title), f.id === topId && h("span", { class: "chip top" }, "maior ganho"), h("span", { class: `chip ${f.kind}` }, KIND[f.kind] || f.kind), f.criteria.map((c) => h("span", { class: "chip mono" }, c))),\n          h("p", {}, f.summary),\n          h("div", { class: "meta2" },\n            (f.changes || f.guided_tasks) && h("span", {}, `escreve ${f.changes} arquivo(s)${f.guided_tasks ? ` + ${f.guided_tasks} tarefa(s) guiada(s)` : ""}`),\n            missing.length > 0 && h("span", { class: "warn2" }, `falta: ${missing.map((m) => m.tool + (m.blocking ? " (obrigat\xF3rio)" : "")).join(", ")}`)),\n          f.notes.slice(0, 2).map((n) => n.length > 190\n            ? h("details", { class: "note" }, h("summary", {}, "aviso: " + n.slice(0, 170).trimEnd() + "\u2026"), h("div", {}, n))\n            : h("div", { class: "meta2" }, h("span", {}, "aviso: " + n)))),\n        cta, cmdBox);\n    });\n    return h("div", {}, h("div", { class: "card" }, cards),\n      h("p", { class: "callout" }, "Nada \xE9 alterado por este relat\xF3rio. ", h("b", {}, "Otimizar nota"), " copia o comando que inicia s\xF3 aquela corre\xE7\xE3o na sess\xE3o do Claude: as mudan\xE7as v\xE3o para uma ", h("b", {}, "branch nova"), " e, se voc\xEA clicar em mais de um bot\xE3o, todas entram na ", h("b", {}, "mesma branch"), " at\xE9 voc\xEA decidir o merge; a nota \xE9 recalculada nela. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));\n  }\n  function panels() {\n    const list = D.panels || [];\n    if (!list.length) return null;\n    return list.map((p) => h("div", { class: "card", style: "margin-bottom:12px" },\n      h("div", { style: "font-weight:650;margin-bottom:6px" }, p.title),\n      p.items.map((i) => h("div", { class: "panel-item" }, h("span", { class: `st ${i.status}`, role: "img", "aria-label": i.status }, i.status === "ok" ? "\u2713" : i.status === "warn" ? "!" : i.status === "fail" ? "\u2715" : "i"), h("span", {}, i.label), h("span", { class: "sec" }, i.detail)))));\n  }\n\n  function notes() {\n    const unimpl = R.unmeasured.filter((u) => u.reason === D.meta.not_implemented_reason);\n    const other = R.unmeasured.filter((u) => u.reason !== D.meta.not_implemented_reason);\n    const out = [];\n    if (other.length) out.push(h("details", {}, h("summary", {}, `N\xE3o medidos por falta de fonte ou erro (${other.length})`), h("ul", { class: "reasons" }, other.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " \xB7 ", CRIT[u.id].title, " \u2014 ", u.reason)))));\n    if (unimpl.length) out.push(h("details", {}, h("summary", {}, `Aguardando coletor (${unimpl.length})`), h("p", { class: "muted", style: "font-size:13px;margin-top:6px" }, "Estes crit\xE9rios ainda n\xE3o t\xEAm medi\xE7\xE3o autom\xE1tica nesta vers\xE3o e ficam fora do c\xE1lculo."), h("ul", { class: "reasons" }, unimpl.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " \xB7 ", CRIT[u.id].title)))));\n    const na = R.not_applicable.filter((u) => u.reason !== D.meta.out_of_scope_reason);\n    if (na.length) out.push(h("details", {}, h("summary", {}, `N\xE3o aplic\xE1veis (${na.length})`), h("ul", { class: "reasons" }, na.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " \xB7 ", CRIT[u.id].title, " \u2014 ", u.reason)))));\n    if (D.evidence_issues.length) out.push(h("details", {}, h("summary", {}, `Evid\xEAncias descartadas na verifica\xE7\xE3o (${D.evidence_issues.length})`), h("p", { class: "muted", style: "font-size:13px;margin-top:6px" }, "Evid\xEAncia que n\xE3o confere com o repo \xE9 descartada; sem nenhuma v\xE1lida o crit\xE9rio vira n\xE3o medido."), h("ul", { class: "reasons" }, D.evidence_issues.map((i) => h("li", {}, h("span", { class: "mono" }, i.id), " \xB7 ", i.evidence.path || i.evidence.sha || i.evidence.name || "", " \u2014 ", i.reason)))));\n    if (R.errors.length) out.push(h("details", {}, h("summary", {}, `Erros de c\xE1lculo (${R.errors.length})`), h("ul", { class: "reasons" }, R.errors.map((e) => h("li", {}, h("span", { class: "mono" }, e.id), " \u2014 ", e.message)))));\n    return out.length ? h("div", { class: "card" }, out) : null;\n  }\n\n  function theme() {\n    const order = ["auto", "light", "dark"];\n    let cur = "auto";\n    try { cur = localStorage.getItem("repo-score-theme") || "auto"; } catch (_) {}\n    const apply = () => { if (cur === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", cur); btn.textContent = `Tema: ${cur === "auto" ? "autom\xE1tico" : cur === "light" ? "claro" : "escuro"}`; };\n    const btn = h("button", { class: "theme", onclick: () => { cur = order[(order.indexOf(cur) + 1) % 3]; try { localStorage.setItem("repo-score-theme", cur); } catch (_) {} apply(); } });\n    apply();\n    return btn;\n  }\n\n  const m = D.meta;\n  const app = document.getElementById("app");\n  document.title = `${m.repo} \xB7 nota ${D.final.grade} \xB7 Repo Score`;\n  const parts = [\n    h("header", {}, h("div", {}, h("h1", {}, m.repo), h("div", { class: "meta" }, m.branch && h("span", { class: "tag mono" }, `${m.branch}${m.commit ? "@" + m.commit : ""}${m.dirty ? " +altera\xE7\xF5es" : ""}`), h("span", {}, new Date(m.generated_at).toLocaleString("pt-BR")), h("span", {}, `rubrica ${m.rubric_version}`), m.policy_source && h("span", {}, "pol\xEDtica do repo aplicada"), m.selected_groups.length < m.groups.length && h("span", { class: "tag" }, "escopo parcial"))), theme()),\n    ...hero(),\n    composition(),\n    h("h2", {}, "Por dimens\xE3o"),\n    h("div", { class: "seg", role: "group", "aria-label": "Filtrar crit\xE9rios" }, [["scored", "Medidos"], ["low", "Abaixo de 2"], ["unmeasured", "N\xE3o medidos"], ["all", "Todos"]].map(([k, label]) =>\n      h("button", { "aria-pressed": String(k === filter), "data-f": k, onclick: (ev) => { filter = k; document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.f === k))); dimEls.forEach((d) => d.classList.add("open")); applyFilter(); } }, label))),\n    h("p", { class: "muted", style: "font-size:13px;margin:8px 0 12px" }, "Clique em um crit\xE9rio para ver limiares e evid\xEAncias; clique no caminho para copi\xE1-lo."),\n    h("div", { class: "card" }, DIMS.map(dimension)),\n    h("h2", {}, "O que mais sobe a nota"),\n    opportunities(),\n    h("h2", {}, "Como subir a nota"),\n    fixes(),\n    panels() && h("h2", {}, "Sa\xFAde do processo"),\n    panels(),\n    h("h2", {}, "Detalhes da medi\xE7\xE3o"),\n    notes(),\n    h("footer", {}, `A nota \xE9 calculada por script a partir da rubrica ${m.rubric_version}; o Claude n\xE3o atribui pontos. Cada pontua\xE7\xE3o carrega evid\xEAncia verificada contra o reposit\xF3rio. Gerado por core-services-repo-score ${m.tool_version} \xB7 ${m.collectors.length} crit\xE9rios com coletor autom\xE1tico.`),\n  ];\n  app.append(...parts.flat().filter(Boolean));\n\n  dimEls.forEach((d) => { if (d.querySelector(\'.crit[data-state="scored"]\')) d.classList.add("open"); });\n  applyFilter();\n})();\n</script>\n</body>\n</html>\n';
 
 // src/report/render.ts
 function safeJson(value) {
@@ -23163,21 +24066,21 @@ function renderReport(data) {
 
 // src/remediation/apply.ts
 import { chmodSync, existsSync as existsSync6, lstatSync as lstatSync2, mkdirSync as mkdirSync3, realpathSync as realpathSync2, rmSync as rmSync2, writeFileSync as writeFileSync3 } from "node:fs";
-import path21 from "node:path";
+import path26 from "node:path";
 var ApplyError = class extends Error {
 };
 function safeTarget(root, rel) {
-  if (rel.includes("\0") || path21.isAbsolute(rel) || /^[A-Za-z]:[\\/]/.test(rel)) throw new ApplyError(`caminho inv\xE1lido: ${rel}`);
-  const norm = path21.posix.normalize(rel.replace(/\\/g, "/"));
-  if (norm.startsWith("../") || norm === ".." || norm === "." || norm === ".git" || norm.startsWith(".git/")) {
+  if (rel.includes("\0") || path26.isAbsolute(rel) || /^[A-Za-z]:[\\/]/.test(rel)) throw new ApplyError(`caminho inv\xE1lido: ${rel}`);
+  const norm2 = path26.posix.normalize(rel.replace(/\\/g, "/"));
+  if (norm2.startsWith("../") || norm2 === ".." || norm2 === "." || norm2 === ".git" || norm2.startsWith(".git/")) {
     throw new ApplyError(`caminho fora do que pode ser alterado: ${rel}`);
   }
   const rootReal = realpathSync2(root);
-  const abs = path21.resolve(rootReal, norm);
-  let probe = path21.dirname(abs);
-  while (!existsSync6(probe) && probe !== rootReal) probe = path21.dirname(probe);
+  const abs = path26.resolve(rootReal, norm2);
+  let probe = path26.dirname(abs);
+  while (!existsSync6(probe) && probe !== rootReal) probe = path26.dirname(probe);
   const real = realpathSync2(probe);
-  if (real !== rootReal && !real.startsWith(rootReal + path21.sep)) throw new ApplyError(`symlink aponta para fora do repo: ${rel}`);
+  if (real !== rootReal && !real.startsWith(rootReal + path26.sep)) throw new ApplyError(`symlink aponta para fora do repo: ${rel}`);
   return abs;
 }
 function applyChanges(root, changes) {
@@ -23194,7 +24097,7 @@ function applyChanges(root, changes) {
     if (c.op === "create" && exists) throw new ApplyError(`${c.path} j\xE1 existe; a a\xE7\xE3o deveria ter planejado uma modifica\xE7\xE3o`);
     if (c.op === "modify" && !exists) throw new ApplyError(`${c.path} n\xE3o existe; a a\xE7\xE3o deveria ter planejado uma cria\xE7\xE3o`);
     if (exists && !lstatSync2(abs).isFile()) throw new ApplyError(`${c.path} n\xE3o \xE9 um arquivo`);
-    mkdirSync3(path21.dirname(abs), { recursive: true });
+    mkdirSync3(path26.dirname(abs), { recursive: true });
     writeFileSync3(abs, c.content);
     if (c.mode === "exec") chmodSync(abs, 493);
     touched.push(c.path);
@@ -23261,7 +24164,7 @@ function uniqueBranchName(root, base) {
 // src/remediation/engine.ts
 var FixError = class extends Error {
 };
-function summarize(data) {
+function summarize2(data) {
   const criteria = {};
   for (const d of Object.values(data.result.dimensions)) for (const c of d.criteria) criteria[c.id] = c.state === "scored" ? c.points : null;
   return {
@@ -23290,8 +24193,8 @@ function resolveActions(ids) {
   if (unknown2.length) throw new FixError(`a\xE7\xE3o desconhecida: ${unknown2.join(", ")} (dispon\xEDveis: ${catalog.map((a) => a.id).join(", ")})`);
   return catalog.filter((a) => ids.includes(a.id));
 }
-var stateDir = (root) => path22.join(reportsHome(), repoSlug(root));
-var stateFile = (root) => path22.join(stateDir(root), "fix-state.json");
+var stateDir = (root) => path27.join(reportsHome(), repoSlug(root));
+var stateFile = (root) => path27.join(stateDir(root), "fix-state.json");
 function loadState(root) {
   try {
     return JSON.parse(readFileSync7(stateFile(root), "utf8"));
@@ -23304,13 +24207,13 @@ function saveState(state) {
   writeFileSync4(stateFile(state.root), JSON.stringify(state, null, 2) + "\n");
 }
 function topRoot(target) {
-  const root = path22.resolve(target);
+  const root = path27.resolve(target);
   if (!existsSync7(root)) throw new FixError(`diret\xF3rio n\xE3o encontrado: ${root}`);
   if (!isRepo(root)) throw new FixError("a corre\xE7\xE3o exige um reposit\xF3rio git: as altera\xE7\xF5es v\xE3o para uma branch nova");
   return repoTop(root);
 }
 var stamp = (d) => {
-  const p = (n) => String(n).padStart(2, "0");
+  const p = (n2) => String(n2).padStart(2, "0");
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
 };
 function previewFixes(opts) {
@@ -23329,7 +24232,8 @@ function previewFixes(opts) {
       guided: plan2.guided,
       notes: plan2.notes,
       post_steps: plan2.postSteps,
-      requires: action.requires.map((r) => ({ tool: r.tool, found: hasCommand(r.tool), why: r.why, blocking: r.blocking }))
+      requires: action.requires.map((r) => ({ tool: r.tool, found: hasCommand(r.tool), why: r.why, blocking: r.blocking })),
+      tokens: plan2.guided.length ? action.estimateTokens?.(ctx, opts.params) ?? null : null
     });
   }
   return out;
@@ -23340,9 +24244,9 @@ function runActions(root, policyPath, actions, state, params, skipHooks, now) {
     const ctx = createCtx(root, policy, now);
     const plan2 = action.plan(ctx, params);
     if (!plan2) continue;
-    state.notes.push(...plan2.notes.map((n) => `${action.id}: ${n}`));
-    state.post_steps.push(...plan2.postSteps.map((n) => `${action.id}: ${n}`));
-    state.guided_tasks.push(...plan2.guided.filter((g) => !state.guided_tasks.some((t) => t.id === g.id)));
+    state.notes.push(...plan2.notes.map((n2) => `${action.id}: ${n2}`));
+    state.post_steps.push(...plan2.postSteps.map((n2) => `${action.id}: ${n2}`));
+    state.guided_tasks = [...state.guided_tasks.filter((t) => !plan2.guided.some((g) => g.id === t.id)), ...plan2.guided];
     if (plan2.changes.length === 0) continue;
     for (const c of plan2.changes) safeTarget(root, c.path);
     const touched = applyChanges(root, plan2.changes);
@@ -23367,6 +24271,46 @@ function commit(root, paths, message, skipHooks) {
   const sha = git3(root, ["rev-parse", "--short", "HEAD"]).trim();
   return { sha, subject: message.split("\n")[0] };
 }
+function commitPending(root, state, skipHooks) {
+  try {
+    const ids = state.guided_tasks.map((t) => t.id).join(", ");
+    const c = commit(root, null, `docs(repo-score): ajustes${ids ? ` guiados (${ids})` : ""}`, skipHooks);
+    if (c) state.commits.push(c);
+    delete state.blocked;
+    state.status = "started";
+    return true;
+  } catch (e) {
+    state.status = "commit_blocked";
+    state.blocked = { action: state.blocked?.action ?? "guided", output: e instanceof GitError ? e.stderr || e.message : e.message };
+    return false;
+  }
+}
+var SESSION_OPEN = ["started", "commit_blocked", "sealed"];
+function addToSession(opts, root, state, actions, now) {
+  if (state.status === "commit_blocked") throw new FixError(`h\xE1 um commit bloqueado por hook na branch ${state.branch}; rode "fix resume" (ou "fix seal --skip-hooks", se o usu\xE1rio aprovar) antes de adicionar outra a\xE7\xE3o.`);
+  if (currentBranch(root) !== state.branch) {
+    if (!isClean(root)) throw new FixError(`a sess\xE3o de corre\xE7\xE3o est\xE1 na branch ${state.branch}, mas a branch atual tem altera\xE7\xF5es n\xE3o commitadas. Commite ou guarde antes de continuar a sess\xE3o.`);
+    git3(root, ["switch", state.branch]);
+  }
+  const previous = state.status;
+  const had = { commits: state.commits.length, tasks: new Set(state.guided_tasks.map((t) => t.id)) };
+  if (!isClean(root) && !commitPending(root, state, !!opts.skipHooks)) {
+    saveState(state);
+    return state;
+  }
+  runActions(root, opts.policyPath, actions, state, opts.params, !!opts.skipHooks, now);
+  const added_tasks = state.guided_tasks.map((t) => t.id).filter((id) => !had.tasks.has(id));
+  const changed = state.commits.length > had.commits || added_tasks.length > 0;
+  state.session = { reused: true, added_actions: changed ? actions.map((a) => a.id) : [], added_tasks, rounds: (state.session?.rounds ?? 1) + (changed ? 1 : 0) };
+  if (changed) {
+    state.actions = [.../* @__PURE__ */ new Set([...state.actions, ...actions.map((a) => a.id)])];
+    state.params = { ...state.params, ...opts.params };
+    if (state.status !== "commit_blocked") state.status = "started";
+    delete state.after;
+  } else if (state.status !== "commit_blocked") state.status = previous;
+  saveState(state);
+  return state;
+}
 async function startFix(opts) {
   const root = topRoot(opts.root);
   const actions = resolveActions(opts.actionIds);
@@ -23374,14 +24318,12 @@ async function startFix(opts) {
   for (const a of actions) {
     for (const r of a.requires) if (r.blocking && !hasCommand(r.tool)) throw new FixError(`${a.id} exige ${r.tool}: ${r.why}`);
   }
+  const existing = loadState(root);
+  const now = opts.now ?? /* @__PURE__ */ new Date();
+  if (existing && SESSION_OPEN.includes(existing.status) && branchExists(root, existing.branch)) return addToSession(opts, root, existing, actions, now);
   if (!isClean(root) && !opts.allowDirty) {
     throw new FixError("h\xE1 altera\xE7\xF5es n\xE3o commitadas na branch atual. Commite ou guarde (git stash) antes, ou use --allow-dirty (as altera\xE7\xF5es viajam para a branch nova, misturadas \xE0s da corre\xE7\xE3o).");
   }
-  const existing = loadState(root);
-  if (existing && ["started", "commit_blocked", "sealed"].includes(existing.status) && branchExists(root, existing.branch)) {
-    throw new FixError(`j\xE1 existe uma corre\xE7\xE3o em andamento na branch ${existing.branch} (status ${existing.status}). Conclua com "fix finish" (merge, keep ou discard) antes de iniciar outra.`);
-  }
-  const now = opts.now ?? /* @__PURE__ */ new Date();
   const baseBranch = currentBranch(root);
   const baseCommit = headSha(root);
   if (!baseCommit) throw new FixError("o reposit\xF3rio n\xE3o tem commits");
@@ -23391,7 +24333,7 @@ async function startFix(opts) {
   git3(root, ["switch", "-c", branch]);
   const state = {
     version: 1,
-    repo: path22.basename(root),
+    repo: path27.basename(root),
     root,
     base_branch: baseBranch,
     base_commit: baseCommit,
@@ -23401,13 +24343,15 @@ async function startFix(opts) {
     params: opts.params,
     created_at: now.toISOString(),
     status: "started",
+    session: { reused: false, added_actions: actions.map((a) => a.id), added_tasks: [], rounds: 1 },
     guided_tasks: [],
     post_steps: [],
     notes: [],
     commits: [],
-    baseline: summarize(base.data)
+    baseline: summarize2(base.data)
   };
   runActions(root, opts.policyPath, actions, state, opts.params, !!opts.skipHooks, now);
+  state.session.added_tasks = state.guided_tasks.map((t) => t.id);
   if (state.status === "commit_blocked") {
     saveState(state);
     return state;
@@ -23449,24 +24393,15 @@ async function sealFix(opts) {
   if (!state) throw new FixError("nenhuma corre\xE7\xE3o em andamento neste repo (rode fix start antes)");
   if (!["started", "commit_blocked", "sealed"].includes(state.status)) throw new FixError(`a corre\xE7\xE3o est\xE1 ${state.status}; nada a selar`);
   if (currentBranch(root) !== state.branch) throw new FixError(`voc\xEA n\xE3o est\xE1 na branch da corre\xE7\xE3o. Rode: git switch ${state.branch}`);
-  if (!isClean(root)) {
-    try {
-      const ids = state.guided_tasks.map((t) => t.id).join(", ");
-      const c = commit(root, null, `docs(repo-score): ajustes${ids ? ` guiados (${ids})` : ""}`, !!opts.skipHooks);
-      if (c) state.commits.push(c);
-      delete state.blocked;
-      state.status = "started";
-    } catch (e) {
-      state.status = "commit_blocked";
-      state.blocked = { action: state.blocked?.action ?? "guided", output: e instanceof GitError ? e.stderr || e.message : e.message };
-    }
-  } else if (state.status === "commit_blocked") {
+  if (!isClean(root)) commitPending(root, state, !!opts.skipHooks);
+  else if (state.status === "commit_blocked") {
     delete state.blocked;
     state.status = "started";
   }
   const after = await analyze({ root, rubricPath: opts.rubricPath, groups: state.groups, ...opts.policyPath ? { policyPath: opts.policyPath } : {}, ...opts.now ? { now: opts.now } : {} });
   const persisted = persist(after.outDir, after.data, renderReport(after.data));
-  state.after = summarize(after.data);
+  state.after = summarize2(after.data);
+  state.pending = after.data.fixes.filter((f) => state.actions.includes(f.id) && f.prompt !== null && (f.potential?.gain_total ?? 0) > 0).map((f) => ({ id: f.id, title: f.title, gain: f.potential.gain_total }));
   if (state.status !== "commit_blocked") state.status = "sealed";
   saveState(state);
   const files = tryGit(root, ["diff", "--stat", `${state.base_commit}...HEAD`]) ?? "";
@@ -23507,8 +24442,8 @@ function finishFix(opts) {
 }
 
 // src/remediation/format.ts
-var fmt = (n) => n === null ? "n/d" : (Math.floor(n * 10) / 10).toFixed(1);
-var tok = (n) => n.toLocaleString("pt-BR");
+var fmt = (n2) => n2 === null ? "n/d" : (Math.floor(n2 * 10) / 10).toFixed(1);
+var tok = (n2) => n2.toLocaleString("pt-BR");
 var kindLabel = (k) => ({ auto: "autom\xE1tica (0 tokens)", guided: "guiada (Claude redige; gasta tokens)", mixed: "mista (script + Claude)", manual: "s\xF3 avisos (revis\xE3o humana)" })[k];
 function formatSuggestions(fixes) {
   if (fixes.length === 0) return "Nenhuma a\xE7\xE3o de corre\xE7\xE3o dispon\xEDvel para os grupos avaliados.";
@@ -23522,20 +24457,21 @@ function formatSuggestions(fixes) {
     const missing = f.requires.filter((r) => !r.found);
     if (missing.length) L.push(`   Pr\xE9-requisitos ausentes: ${missing.map((r) => `${r.tool}${r.blocking ? " (obrigat\xF3rio)" : ""}: ${r.why}`).join("; ")}`);
     if (f.params.length) L.push(`   Par\xE2metros: ${f.params.map((p) => p.key).join(", ")}`);
-    for (const n of f.notes.slice(0, 3)) L.push(`   Aviso: ${n}`);
+    for (const n2 of f.notes.slice(0, 3)) L.push(`   Aviso: ${n2}`);
   });
   L.push("Todas as altera\xE7\xF5es v\xE3o para uma branch nova; a branch atual n\xE3o \xE9 tocada e voc\xEA decide o merge.");
   return L.join("\n");
 }
-function formatPreview(items) {
+function formatPreview(items, session) {
   if (items.length === 0) return "Nada a alterar: nenhuma das a\xE7\xF5es selecionadas tem trabalho a fazer.";
-  const L = ["PR\xC9VIA (nada foi escrito; nenhuma branch foi criada):"];
+  const L = [session ? `PR\xC9VIA (nada foi escrito). H\xE1 uma sess\xE3o aberta: ao aplicar, as a\xE7\xF5es entram na MESMA branch ${session.branch}, sem criar outra. A pr\xE9via considera a branch atual; para ver o efeito sobre a sess\xE3o, rode-a com a branch da sess\xE3o ativa.` : "PR\xC9VIA (nada foi escrito; nenhuma branch foi criada):"];
   for (const it of items) {
     L.push(`
 [${it.id}] ${it.title}`);
     for (const c of it.changes) L.push(`  ${c.op === "create" ? "criar   " : c.op === "modify" ? "alterar " : "remover "}${c.path}  (${c.lines})${c.note ? ` \u2014 ${c.note}` : ""}`);
-    for (const g of it.guided) L.push(`  tarefa guiada: ${g.title} \u2192 ${g.targets.join(", ")}`);
-    for (const n of it.notes) L.push(`  aviso: ${n}`);
+    for (const g of it.guided) L.push(`  tarefa guiada: ${g.title} \u2192 ${g.targets.length > 3 ? `${g.targets.length} arquivos` : g.targets.join(", ")}`);
+    if (it.tokens) L.push(`  TOKENS (estimativa): \u2248 ${tok(it.tokens.low)}\u2013${tok(it.tokens.high)} \xB7 ${it.tokens.basis}`);
+    for (const n2 of it.notes) L.push(`  aviso: ${n2}`);
     for (const p of it.post_steps) L.push(`  fora da branch: ${p}`);
     const miss = it.requires.filter((r) => !r.found);
     if (miss.length) L.push(`  pr\xE9-requisitos ausentes: ${miss.map((r) => r.tool).join(", ")}`);
@@ -23543,7 +24479,33 @@ function formatPreview(items) {
   L.push("\nA\xE7\xF5es posteriores s\xE3o planejadas depois das anteriores (ex.: o \xEDndice lista o que outras a\xE7\xF5es criam), ent\xE3o a lista final pode ter mais itens.");
   return L.join("\n");
 }
+function formatReused(s) {
+  const sess = s.session;
+  const L = [
+    `SESS\xC3O ABERTA REAPROVEITADA: ${s.branch} (rodada ${sess.rounds}); nenhuma branch nova foi criada.`,
+    `Origem: ${s.base_branch ?? "(HEAD destacado)"}@${s.base_commit.slice(0, 8)}, que N\xC3O foi alterada. A nota de partida segue sendo a da origem: ${s.baseline.grade} \xB7 ${fmt(s.baseline.total)}/100.`,
+    `A\xE7\xF5es da sess\xE3o at\xE9 agora: ${s.actions.join(", ")}.`
+  ];
+  if (sess.added_actions.length === 0 && s.status !== "commit_blocked") L.push(`Nada novo: ${s.actions.length ? "as a\xE7\xF5es pedidas j\xE1 estavam aplicadas ou n\xE3o t\xEAm o que alterar" : "sem altera\xE7\xF5es"}.`);
+  else L.push(`Adicionado agora: ${sess.added_actions.join(", ")}.`);
+  const tasks = s.guided_tasks.filter((t) => sess.added_tasks.includes(t.id));
+  if (tasks.length) {
+    L.push(`
+Tarefas guiadas NOVAS (${tasks.length}) para o Claude executar agora, s\xF3 nos arquivos indicados:`);
+    for (const t of tasks) L.push(`  - ${t.title} \u2192 ${t.targets.join(", ")}`);
+  }
+  if (s.status === "commit_blocked" && s.blocked) {
+    L.push(`
+COMMIT BLOQUEADO por hook (${s.blocked.action}):`);
+    L.push(s.blocked.output.split("\n").slice(0, 12).map((l) => `  | ${l}`).join("\n"));
+    L.push("Se voc\xEA aprova pular os hooks nesta corre\xE7\xE3o, rode: fix resume --skip-hooks");
+  }
+  for (const n2 of s.notes.slice(-6)) L.push(`Aviso: ${n2}`);
+  L.push("\nPr\xF3ximo passo: execute as tarefas guiadas (se houver) e rode `fix seal` (recalcula a nota NA BRANCH DA SESS\xC3O, contra a origem). S\xF3 encerre com `fix finish` quando n\xE3o houver mais melhorias a aplicar.");
+  return L.join("\n");
+}
 function formatStart(s) {
+  if (s.session?.reused) return formatReused(s);
   if (s.status === "nothing_to_do") return `Nada a fazer: as a\xE7\xF5es selecionadas n\xE3o produziram altera\xE7\xF5es. Nenhuma branch foi criada; voc\xEA segue em ${s.base_branch ?? s.base_commit}.`;
   const L = [
     `BRANCH CRIADA: ${s.branch}`,
@@ -23567,7 +24529,7 @@ COMMIT BLOQUEADO por hook (${s.blocked.action}). As altera\xE7\xF5es est\xE3o ap
 Tarefas guiadas (${s.guided_tasks.length}) para o Claude executar agora, s\xF3 nos arquivos indicados:`);
     for (const t of s.guided_tasks) L.push(`  - ${t.title} \u2192 ${t.targets.join(", ")}`);
   }
-  for (const n of s.notes) L.push(`Aviso: ${n}`);
+  for (const n2 of s.notes) L.push(`Aviso: ${n2}`);
   for (const p of s.post_steps) L.push(`Fora da branch: ${p}`);
   L.push(s.guided_tasks.length ? "\nPr\xF3ximo passo: execute as tarefas guiadas e rode `fix seal` (commita e recalcula a nota NA BRANCH NOVA)." : "\nPr\xF3ximo passo: rode `fix seal` (recalcula a nota NA BRANCH NOVA).");
   return L.join("\n");
@@ -23598,6 +24560,14 @@ function formatSeal(r) {
   const diff = criterionDiff(s.baseline, a);
   L.push(diff.length ? `Crit\xE9rios que mudaram: ${diff.join("; ")}` : "Nenhum crit\xE9rio mudou de pontua\xE7\xE3o.");
   if (a.blocked_by.length) L.push(`GATE ACIONADO: ${a.blocked_by.join(", ")}`);
+  const checks = data.panels.filter((p) => p.group === "documentation").flatMap((p) => p.items).filter((i) => i.label === "Padr\xE3o das specs" || i.status === "fail");
+  if (checks.length) {
+    L.push("Verifica\xE7\xF5es do SDD na branch:");
+    for (const c of checks) L.push(`  ${c.status === "ok" ? "\u2713" : c.status === "warn" ? "!" : "\u2715"} ${c.label}: ${c.detail}`);
+  }
+  if (s.pending?.length) {
+    L.push(`AINDA H\xC1 GANHO nas a\xE7\xF5es desta sess\xE3o: ${s.pending.map((p) => `${p.id} (at\xE9 +${p.gain.toFixed(1)} pts)`).join(", ")}. Rode \`fix start --actions ${s.pending.map((p) => p.id).join(",")}\` de novo (reaproveita esta branch, sem criar outra) e \`fix seal\`; repita at\xE9 o ganho acabar.`);
+  }
   if (s.status === "commit_blocked" && s.blocked) L.push(`ATEN\xC7\xC3O: h\xE1 altera\xE7\xF5es sem commit (bloqueadas por hook em ${s.blocked.action}). A nota acima j\xE1 as considera.`);
   if (s.commits.length) {
     L.push("Commits na branch:");
@@ -23619,7 +24589,7 @@ function formatFinish(r) {
 }
 function formatState(s) {
   if (!s) return "Nenhuma corre\xE7\xE3o registrada para este repo.";
-  return `Corre\xE7\xE3o: ${s.status} \xB7 branch ${s.branch} (origem ${s.base_branch ?? "HEAD destacado"}@${s.base_commit.slice(0, 8)}) \xB7 a\xE7\xF5es ${s.actions.join(", ")} \xB7 ${s.commits.length} commit(s)`;
+  return `Sess\xE3o de corre\xE7\xE3o: ${s.status} \xB7 branch ${s.branch} (origem ${s.base_branch ?? "HEAD destacado"}@${s.base_commit.slice(0, 8)}) \xB7 a\xE7\xF5es ${s.actions.join(", ")} \xB7 ${s.commits.length} commit(s)`;
 }
 
 // src/cli/main.ts
@@ -23642,6 +24612,12 @@ var USAGE = `repo-score <comando>
       Ativa os grupos informados (grava em ~/.repo-score/config.json). groups reset volta ao padr\xE3o da skill.
       Tamb\xE9m vale a vari\xE1vel REPO_SCORE_ENABLED_GROUPS (ids separados por v\xEDrgula, ou all).
 
+  sdd simulate <caminho-do-repo> [--max-specs N] [--json]
+      Simula do zero a ado\xE7\xE3o do SDD (detec\xE7\xE3o, documentos, c\xF3digo, plano de specs, guardrails, tokens e nota).
+      S\xF3 leitura: nada \xE9 criado no repo.
+  sdd lint <caminho-do-repo>
+      Verifica as specs de docs/specs contra o padr\xE3o (4 blocos, tamanho, ponteiros Arquivo: existentes).
+
   fixes <caminho-do-repo> [--groups a,b] [--json]
       Lista as a\xE7\xF5es de corre\xE7\xE3o dos grupos avaliados, com melhoria potencial de nota, tokens e pr\xE9-requisitos.
   fix preview <repo> --actions a,b [--param k=v ...]
@@ -23661,7 +24637,7 @@ function flag(args, name) {
   const i = args.indexOf(`--${name}`);
   return i >= 0 ? args[i + 1] : void 0;
 }
-var VALUE_FLAGS = ["policy", "out", "groups", "rubric", "results", "repo-root", "actions", "param", "decision", "branch"];
+var VALUE_FLAGS = ["max-specs", "policy", "out", "groups", "rubric", "results", "repo-root", "actions", "param", "decision", "branch"];
 var flagAll = (args, name) => args.flatMap((a, i) => a === `--${name}` && args[i + 1] !== void 0 ? [args[i + 1]] : []);
 function positional(args) {
   return args.find((a, i) => !a.startsWith("--") && !VALUE_FLAGS.includes((args[i - 1] ?? "").replace(/^--/, "")));
@@ -23671,15 +24647,15 @@ function groupsFlag(args) {
   return g ? g.split(",").map((x) => x.trim()).filter(Boolean) : void 0;
 }
 function defaultSkillMd() {
-  const here = path23.dirname(fileURLToPath2(import.meta.url));
-  return [path23.resolve(here, "../SKILL.md"), path23.resolve(here, "../../skill/SKILL.md")].find((c) => existsSync8(c));
+  const here = path28.dirname(fileURLToPath2(import.meta.url));
+  return [path28.resolve(here, "../SKILL.md"), path28.resolve(here, "../../skill/SKILL.md")].find((c) => existsSync8(c));
 }
 function defaultRubricPath() {
-  const here = path23.dirname(fileURLToPath2(import.meta.url));
+  const here = path28.dirname(fileURLToPath2(import.meta.url));
   const candidates = [
-    path23.resolve(here, "../references/rubric.json"),
+    path28.resolve(here, "../references/rubric.json"),
     // skill/scripts -> skill/references
-    path23.resolve(here, "../../skill/references/rubric.json")
+    path28.resolve(here, "../../skill/references/rubric.json")
     // src/cli -> skill/references
   ];
   const found = candidates.find((c) => existsSync8(c));
@@ -23702,7 +24678,7 @@ function openInBrowser(file2) {
   } catch {
   }
 }
-var fmt2 = (n) => n === null ? "n/d" : (Math.floor(n * 10) / 10).toFixed(1);
+var fmt2 = (n2) => n2 === null ? "n/d" : (Math.floor(n2 * 10) / 10).toFixed(1);
 function summary(data, reportPath) {
   const r = data.result;
   const lines = [];
@@ -23786,10 +24762,10 @@ async function main(argv) {
     const files = persist(dir, data, html);
     if (args.includes("--json")) console.log(JSON.stringify(data, null, 2));
     else console.log(summary(data, files.html));
-    const reportUrl = pathToFileURL(path23.join(dir, "report.html")).href;
+    const reportUrl = pathToFileURL(path28.join(dir, "report.html")).href;
     if (args.includes("--no-open")) console.error(`relat\xF3rio: ${reportUrl}`);
     else {
-      openInBrowser(path23.join(dir, "report.html"));
+      openInBrowser(path28.join(dir, "report.html"));
       console.error(`abrindo ${reportUrl}`);
     }
     return 0;
@@ -23817,6 +24793,32 @@ async function main(argv) {
     }
     return 0;
   }
+  if (cmd === "sdd") {
+    const [sub, ...rest] = args;
+    const target = positional(rest);
+    if (!sub || !target) {
+      console.error("uso: sdd <simulate|lint> <repo>\n\n" + USAGE);
+      return 2;
+    }
+    const policyPath = flag(rest, "policy");
+    if (sub === "simulate") {
+      const maxSpecs = flag(rest, "max-specs");
+      const root = path28.resolve(target);
+      const { policy } = loadPolicy(root, policyPath);
+      const base = await analyze({ root, rubricPath: defaultRubricPath(), groups: ["documentation"], ...policyPath ? { policyPath } : {}, outDir: path28.join(os2.tmpdir(), "repo-score-simulate") });
+      const report = simulateSdd(createCtx(root, policy), { rubric: base.rubric, input: base.input, result: base.data.result, meta: { repo: base.data.meta.repo, branch: base.data.meta.branch, commit: base.data.meta.commit } }, maxSpecs ? { maxSpecs: Number(maxSpecs) } : {});
+      console.log(rest.includes("--json") ? JSON.stringify(report, null, 2) : formatSimulation(report));
+      return 0;
+    }
+    if (sub === "lint") {
+      const root = path28.resolve(target);
+      const { policy } = loadPolicy(root, policyPath);
+      const results = lintSpecs(createCtx(root, policy));
+      console.log(rest.includes("--json") ? JSON.stringify(results, null, 2) : formatLint(results));
+      return results.some((r) => r.issues.some((i) => i.level === "error")) ? 1 : 0;
+    }
+    throw new Error(`subcomando desconhecido: sdd ${sub}`);
+  }
   if (cmd === "fixes") {
     const target = positional(args);
     if (!target) {
@@ -23825,7 +24827,7 @@ async function main(argv) {
     }
     const policyPath = flag(args, "policy");
     const groups = groupsFlag(args);
-    const { data } = await analyze({ root: target, rubricPath: defaultRubricPath(), ...policyPath ? { policyPath } : {}, ...groups ? { groups } : {}, outDir: path23.join(os2.tmpdir(), "repo-score-fixes") });
+    const { data } = await analyze({ root: target, rubricPath: defaultRubricPath(), ...policyPath ? { policyPath } : {}, ...groups ? { groups } : {}, outDir: path28.join(os2.tmpdir(), "repo-score-fixes") });
     console.log(args.includes("--json") ? JSON.stringify(data.fixes, null, 2) : formatSuggestions(data.fixes));
     return 0;
   }
@@ -23846,7 +24848,8 @@ async function main(argv) {
     if (sub === "preview") {
       if (actionIds.length === 0) throw new FixError("informe --actions (veja `fixes`)");
       const items = previewFixes({ root: target, actionIds, params, ...policyPath ? { policyPath } : {} });
-      out(items, formatPreview(items));
+      const open2 = loadState(path28.resolve(target));
+      out(items, formatPreview(items, open2 && ["started", "commit_blocked", "sealed"].includes(open2.status) ? open2 : null));
       return 0;
     }
     if (sub === "start") {
@@ -23875,7 +24878,7 @@ async function main(argv) {
       return 0;
     }
     if (sub === "status") {
-      const st = loadState(path23.resolve(target));
+      const st = loadState(path28.resolve(target));
       out(st, formatState(st));
       return 0;
     }
@@ -23883,8 +24886,8 @@ async function main(argv) {
   }
   if (cmd === "validate-rubric") {
     const rubric = parseRubric(readJson2(flag(args, "rubric") ?? defaultRubricPath()));
-    const n = rubric.dimensions.reduce((s, d) => s + d.criteria.length, 0);
-    console.log(`rubrica ${rubric.version} v\xE1lida: ${rubric.dimensions.length} dimens\xF5es, ${n} crit\xE9rios`);
+    const n2 = rubric.dimensions.reduce((s, d) => s + d.criteria.length, 0);
+    console.log(`rubrica ${rubric.version} v\xE1lida: ${rubric.dimensions.length} dimens\xF5es, ${n2} crit\xE9rios`);
     return 0;
   }
   if (cmd === "score") {

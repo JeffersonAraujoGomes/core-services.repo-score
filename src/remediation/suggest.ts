@@ -4,6 +4,7 @@ import { GROUP_MODULES } from "../groups/index.js";
 import type { CriterionResult, ResultsFile } from "../schema/evidence.js";
 import type { Grade, Rubric } from "../schema/rubric.js";
 import { score, type ScoreResult } from "../scorer/score.js";
+import { optimizePrompt } from "./prompt.js";
 import type { Action, ParamSpec } from "./types.js";
 
 export interface FixSuggestion {
@@ -21,6 +22,8 @@ export interface FixSuggestion {
   tokens: { low: number; high: number; basis: string } | null;
   requires: { tool: string; found: boolean; why: string; blocking: boolean }[];
   params: ParamSpec[];
+  /** Texto do botão "Otimizar nota": comando para colar na sessão do Claude; null quando a ação só traz avisos. */
+  prompt: string | null;
   /** Teto: o que a nota seria se todos os critérios da ação medidos abaixo de 2 chegassem a 2. */
   potential: { criteria: string[]; gain_total: number; total_after: number | null; grade_after: Grade | null; dimension_pct_after: number | null } | null;
 }
@@ -56,8 +59,12 @@ export function buildSuggestions(args: {
 }): FixSuggestion[] {
   const { ctx, rubric, input, base, groups } = args;
   const out: FixSuggestion[] = [];
+  const outcomes = Object.values(base.dimensions).flatMap((d) => d.criteria);
+  /** A ação só aparece se algum critério dela pode subir: medido abaixo de 2 ou ainda não medido. No máximo, não há o que otimizar. */
+  const hasRoom = (ids: string[]) => ids.some((id) => outcomes.some((o) => o.id === id && ((o.state === "scored" && o.points < 2) || o.state === "unmeasured")));
   for (const g of GROUP_MODULES.filter((m) => groups.includes(m.id))) {
     for (const action of g.actions) {
+      if (!hasRoom(action.criteria)) continue;
       const plan = action.plan(ctx, {});
       if (!plan) continue;
       const kind = plan.changes.length === 0 && plan.guided.length === 0 ? "manual" : action.kind;
@@ -78,6 +85,7 @@ export function buildSuggestions(args: {
         tokens: kind === "auto" || kind === "manual" ? null : (action.estimateTokens?.(ctx, {}) ?? null),
         requires: action.requires.map((r) => ({ tool: r.tool, found: hasCommand(r.tool, r.tool === "git" ? ["--version"] : ["--version"]), why: r.why, blocking: r.blocking })),
         params: action.params ?? [],
+        prompt: kind === "manual" ? null : optimizePrompt(args.root, { id: action.id, group: action.group, title: action.title, criteria: action.criteria, kind }),
         potential: sim && base.total !== null && sim.total !== null
           ? { criteria: lifted, gain_total: sim.total - base.total, total_after: sim.total, grade_after: sim.grade, dimension_pct_after: dimPct }
           : null,

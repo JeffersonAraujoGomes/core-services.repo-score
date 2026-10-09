@@ -12,6 +12,7 @@
   --series: #2a78d6; --series-soft: #cde2fb;
   --good: #0ca30c; --good-ink: #006300; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
   --on-fill: #0b0b0b; --on-critical: #ffffff;
+  --cta: #1a66c4; --on-cta: #ffffff;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -20,6 +21,7 @@
     --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
     --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10);
     --series: #3987e5; --series-soft: #184f95; --good-ink: #0ca30c;
+    --cta: #5a9cee; --on-cta: #0b0b0b;
   }
 }
 :root[data-theme="dark"] {
@@ -27,6 +29,7 @@
   --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
   --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10);
   --series: #3987e5; --series-soft: #184f95; --good-ink: #0ca30c;
+  --cta: #5a9cee; --on-cta: #0b0b0b;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -123,16 +126,36 @@ footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
   .opp { grid-template-columns: 44px 1fr; } .opp .gain, .opp .arrow { grid-column: 2; }
 }
 
-.fix { border-top: 1px solid var(--grid); padding: 14px 0; }
-.fix:first-child { border-top: 0; padding-top: 0; }
-.fix-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-.fix-head b { font-weight: 650; }
+.fix { display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 14px 28px; border-top: 1px solid var(--grid); padding: 20px 0; align-items: center; }
+.fix:first-child { border-top: 0; padding-top: 4px; }
+.fix:last-child { padding-bottom: 4px; }
+.fix-head { display: flex; gap: 8px 10px; align-items: center; flex-wrap: wrap; }
+.fix-head b { font-weight: 650; font-size: 16px; }
 .chip { font-size: 12px; border: 1px solid var(--ring); border-radius: 999px; padding: 1px 9px; color: var(--ink-2); white-space: nowrap; }
 .chip.auto { border-color: var(--good); color: var(--good-ink); }
 .chip.guided, .chip.mixed { border-color: var(--warning); }
-.fix p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
-.fix .meta2 { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.chip.top { background: var(--cta); border-color: var(--cta); color: var(--on-cta); font-weight: 600; }
+.fix p { margin: 6px 0 0; color: var(--ink-2); font-size: 14px; }
+.fix .meta2 { display: flex; gap: 4px 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }
 .fix .warn2 { color: var(--ink); }
+.fix details.note { border: 0; padding: 6px 0 0; font-size: 13px; color: var(--muted); }
+.fix details.note summary { font-weight: 400; font-size: 13px; }
+.fix details.note div { margin-top: 4px; overflow-wrap: anywhere; }
+.fix-cta { display: grid; gap: 8px; justify-items: stretch; text-align: center; padding: 14px; border: 1px solid var(--ring); border-radius: 12px; background: var(--page); }
+.fix-cta .gain-big { display: grid; line-height: 1.15; }
+.fix-cta .gain-big b { font-size: 26px; font-weight: 700; color: var(--good-ink); font-variant-numeric: tabular-nums; }
+.fix-cta .gain-big span { font-size: 12px; color: var(--muted); }
+.btn-cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; border: 0; border-radius: 10px; padding: 11px 16px; background: var(--cta); color: var(--on-cta); box-shadow: 0 1px 2px rgba(0,0,0,.18); transition: transform .08s ease, filter .15s ease; }
+.btn-cta:hover { filter: brightness(1.08); } .btn-cta:active { transform: translateY(1px); }
+.btn-cta:focus-visible { outline: 3px solid var(--series-soft); outline-offset: 2px; }
+.btn-cta svg { width: 17px; height: 17px; flex: none; }
+.btn-cta.done { background: var(--good); color: #fff; }
+.fix-cta .hint { font-size: 12px; color: var(--muted); }
+.fix-cta.plain { align-content: center; font-size: 13px; color: var(--muted); }
+.fix-cmd { grid-column: 1 / -1; border: 1px solid var(--ring); border-radius: 10px; background: var(--page); padding: 12px 14px; }
+.fix-cmd ol { margin: 0 0 8px; padding-left: 20px; font-size: 13px; color: var(--ink-2); }
+.fix-cmd pre { margin: 0; white-space: pre-wrap; font-family: var(--mono); font-size: 12.5px; background: var(--grid); border-radius: 8px; padding: 10px 12px; user-select: all; }
+@media (max-width: 760px) { .fix { grid-template-columns: 1fr; } }
 .panel-item { display: grid; grid-template-columns: 26px 200px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--grid); font-size: 14px; align-items: baseline; }
 .panel-item:first-of-type { border-top: 0; }
 .st { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
@@ -355,24 +378,60 @@ footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
 
   const KIND = { auto: "automática · 0 tokens", guided: "guiada · o Claude redige", mixed: "mista · script + Claude", manual: "só avisos" };
   const tokFmt = (n) => NF(0).format(n);
+  /** Ícone de raio (SVG inline); o DOM de SVG precisa do namespace próprio. */
+  function boltIcon() {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", "M13 2 4 14h6l-1 8 9-12h-6z"); path.setAttribute("fill", "currentColor");
+    svg.append(path);
+    return svg;
+  }
+  /** Botão "Otimizar nota": copia o comando que inicia a correção deste ponto na sessão do Claude (o relatório é estático e não fala com a sessão). */
+  function optimizeCta(f, cmdBox) {
+    const label = h("span", {}, "Otimizar nota");
+    const btn = h("button", { class: "btn-cta", type: "button", "aria-describedby": "opt-" + f.id }, boltIcon(), label);
+    btn.onclick = () => {
+      let ok = false;
+      try { navigator.clipboard.writeText(f.prompt); ok = true; } catch (_) {}
+      if (!ok) { try { const r = document.createRange(); r.selectNodeContents(cmdBox.querySelector("pre")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); ok = document.execCommand("copy"); sel.removeAllRanges(); } catch (_) {} }
+      cmdBox.hidden = false;
+      label.textContent = ok ? "Comando copiado" : "Copie o comando abaixo";
+      btn.classList.toggle("done", ok);
+      if (ok) setTimeout(() => { label.textContent = "Copiar de novo"; }, 2500);
+      cmdBox.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    };
+    return btn;
+  }
   function fixes() {
     const list = D.fixes || [];
-    if (!list.length) return null;
+    if (!list.length) return h("p", { class: "muted" }, D.opportunities.length ? "Nenhuma correção automática disponível para os critérios abaixo de 2 pontos." : "Todos os critérios medidos já estão na pontuação máxima: não há nada a otimizar.");
     const groupTitle = (id) => (D.meta.groups.find((g) => g.id === id) || {}).title || id;
+    const topId = list.filter((f) => f.prompt && f.potential).sort((x, y) => y.potential.gain_total - x.potential.gain_total)[0]?.id;
     const cards = list.map((f) => {
       const missing = f.requires.filter((r) => !r.found);
+      const cmdBox = f.prompt ? h("div", { class: "fix-cmd", id: "opt-" + f.id, hidden: "" },
+        h("ol", {}, h("li", {}, "Cole o comando na sessão do Claude e envie."), h("li", {}, "O Claude mostra o custo em tokens e pede a sua confirmação antes de alterar qualquer coisa."), h("li", {}, "As mudanças vão para a branch nova da sessão (a mesma para todos os botões); o merge é decisão sua.")),
+        h("pre", {}, f.prompt)) : null;
+      const gain = f.potential ? h("div", { class: "gain-big", title: "teto: se os critérios medidos abaixo de 2 chegarem a 2" }, h("span", {}, "ganho potencial"), h("b", {}, `até +${NF(1).format(f.potential.gain_total)} pts`)) : null;
+      const cta = f.prompt
+        ? h("div", { class: "fix-cta" }, gain, optimizeCta(f, cmdBox), h("span", { class: "hint" }, f.tokens ? `≈ ${tokFmt(f.tokens.low)}–${tokFmt(f.tokens.high)} tokens · branch nova` : "0 tokens · branch nova"))
+        : h("div", { class: "fix-cta plain" }, "Só avisos: não há correção automática a iniciar.");
       return h("div", { class: "fix" },
-        h("div", { class: "fix-head" }, h("b", {}, f.title), h("span", { class: `chip ${f.kind}` }, KIND[f.kind] || f.kind), f.criteria.map((c) => h("span", { class: "chip mono" }, c)),
-          f.potential && h("span", { class: "gain", title: "teto: se os critérios medidos abaixo de 2 chegarem a 2" }, `até +${NF(1).format(f.potential.gain_total)} pts`)),
-        h("p", {}, f.summary),
-        h("div", { class: "meta2" },
-          (f.changes || f.guided_tasks) && h("span", {}, `escreve ${f.changes} arquivo(s)${f.guided_tasks ? ` + ${f.guided_tasks} tarefa(s) guiada(s)` : ""}`),
-          f.tokens && h("span", {}, `tokens ≈ ${tokFmt(f.tokens.low)}–${tokFmt(f.tokens.high)} (estimativa)`),
-          missing.length > 0 && h("span", { class: "warn2" }, `falta: ${missing.map((m) => m.tool + (m.blocking ? " (obrigatório)" : "")).join(", ")}`)),
-        f.notes.slice(0, 2).map((n) => h("div", { class: "meta2" }, h("span", {}, "aviso: " + n))));
+        h("div", {},
+          h("div", { class: "fix-head" }, h("b", {}, f.title), f.id === topId && h("span", { class: "chip top" }, "maior ganho"), h("span", { class: `chip ${f.kind}` }, KIND[f.kind] || f.kind), f.criteria.map((c) => h("span", { class: "chip mono" }, c))),
+          h("p", {}, f.summary),
+          h("div", { class: "meta2" },
+            (f.changes || f.guided_tasks) && h("span", {}, `escreve ${f.changes} arquivo(s)${f.guided_tasks ? ` + ${f.guided_tasks} tarefa(s) guiada(s)` : ""}`),
+            missing.length > 0 && h("span", { class: "warn2" }, `falta: ${missing.map((m) => m.tool + (m.blocking ? " (obrigatório)" : "")).join(", ")}`)),
+          f.notes.slice(0, 2).map((n) => n.length > 190
+            ? h("details", { class: "note" }, h("summary", {}, "aviso: " + n.slice(0, 170).trimEnd() + "…"), h("div", {}, n))
+            : h("div", { class: "meta2" }, h("span", {}, "aviso: " + n)))),
+        cta, cmdBox);
     });
     return h("div", {}, h("div", { class: "card" }, cards),
-      h("p", { class: "callout" }, "Nada é alterado por este relatório. Para aplicar, peça ", h("span", { class: "mono-inline" }, "/repo-score"), " e escolha o plano de melhoria: as mudanças vão para uma ", h("b", {}, "branch nova"), ", a nota é recalculada nela e você decide o merge. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));
+      h("p", { class: "callout" }, "Nada é alterado por este relatório. ", h("b", {}, "Otimizar nota"), " copia o comando que inicia só aquela correção na sessão do Claude: as mudanças vão para uma ", h("b", {}, "branch nova"), " e, se você clicar em mais de um botão, todas entram na ", h("b", {}, "mesma branch"), " até você decidir o merge; a nota é recalculada nela. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));
   }
   function panels() {
     const list = D.panels || [];
@@ -419,7 +478,7 @@ footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
     h("div", { class: "card" }, DIMS.map(dimension)),
     h("h2", {}, "O que mais sobe a nota"),
     opportunities(),
-    fixes() && h("h2", {}, "Como subir a nota"),
+    h("h2", {}, "Como subir a nota"),
     fixes(),
     panels() && h("h2", {}, "Saúde do processo"),
     panels(),

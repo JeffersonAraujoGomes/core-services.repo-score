@@ -51,6 +51,10 @@ export interface FixState {
   blocked?: { action: string; output: string };
   /** Ações que não chegaram a ser aplicadas porque um commit anterior foi bloqueado. */
   not_applied?: string[];
+  /** O que o último `fix start` fez nesta branch: criou a sessão ou reaproveitou a que já estava aberta. */
+  session?: { reused: boolean; added_actions: string[]; added_tasks: string[]; rounds: number };
+  /** Ações da sessão que, medido na branch, ainda têm ganho de nota: rode `fix start --actions <id>` de novo (mesma branch). */
+  pending?: { id: string; title: string; gain: number }[];
 }
 
 export function summarize(data: ReportData): ScoreSummary {
@@ -125,6 +129,8 @@ export interface PreviewItem {
   notes: string[];
   post_steps: string[];
   requires: { tool: string; found: boolean; why: string; blocking: boolean }[];
+  /** Previsão de tokens das tarefas guiadas (null quando a ação é só script). */
+  tokens: { low: number; high: number; basis: string } | null;
 }
 
 /** Simula o que cada ação faria (sem escrever, sem branch). Cada ação é planejada sobre o estado atual. */
@@ -145,6 +151,7 @@ export function previewFixes(opts: { root: string; actionIds: string[]; params: 
       notes: plan.notes,
       post_steps: plan.postSteps,
       requires: action.requires.map((r) => ({ tool: r.tool, found: hasCommand(r.tool), why: r.why, blocking: r.blocking })),
+      tokens: plan.guided.length ? (action.estimateTokens?.(ctx, opts.params) ?? null) : null,
     });
   }
   return out;
@@ -159,7 +166,8 @@ function runActions(root: string, policyPath: string | undefined, actions: Actio
     if (!plan) continue;
     state.notes.push(...plan.notes.map((n) => `${action.id}: ${n}`));
     state.post_steps.push(...plan.postSteps.map((n) => `${action.id}: ${n}`));
-    state.guided_tasks.push(...plan.guided.filter((g) => !state.guided_tasks.some((t) => t.id === g.id)));
+    // uma tarefa com o mesmo id (ex.: lote de specs de uma rodada anterior da sessão) é substituída pela versão atual do plano
+    state.guided_tasks = [...state.guided_tasks.filter((t) => !plan.guided.some((g) => g.id === t.id)), ...plan.guided];
     if (plan.changes.length === 0) continue;
     for (const c of plan.changes) safeTarget(root, c.path);
     const touched = applyChanges(root, plan.changes);
@@ -200,6 +208,54 @@ function commit(root: string, paths: string[] | null, message: string, skipHooks
   return { sha, subject: message.split("\n")[0]! };
 }
 
+/** Commita o que ficou na working tree da branch da sessão (trabalho guiado da rodada anterior). Devolve false se um hook bloqueou. */
+function commitPending(root: string, state: FixState, skipHooks: boolean): boolean {
+  try {
+    const ids = state.guided_tasks.map((t) => t.id).join(", ");
+    const c = commit(root, null, `docs(repo-score): ajustes${ids ? ` guiados (${ids})` : ""}`, skipHooks);
+    if (c) state.commits.push(c);
+    delete state.blocked;
+    state.status = "started";
+    return true;
+  } catch (e) {
+    state.status = "commit_blocked";
+    state.blocked = { action: state.blocked?.action ?? "guided", output: e instanceof GitError ? e.stderr || e.message : (e as Error).message };
+    return false;
+  }
+}
+
+const SESSION_OPEN: FixStatus[] = ["started", "commit_blocked", "sealed"];
+
+/**
+ * Uma sessão = uma branch para todas as melhorias de nota pedidas enquanto ela está aberta. Um novo `fix start` com
+ * a sessão aberta aplica a nova ação NA MESMA branch, mantendo a nota de partida (a da origem) como referência.
+ */
+function addToSession(opts: StartOptions, root: string, state: FixState, actions: Action[], now: Date): FixState {
+  if (state.status === "commit_blocked") throw new FixError(`há um commit bloqueado por hook na branch ${state.branch}; rode "fix resume" (ou "fix seal --skip-hooks", se o usuário aprovar) antes de adicionar outra ação.`);
+  if (currentBranch(root) !== state.branch) {
+    if (!isClean(root)) throw new FixError(`a sessão de correção está na branch ${state.branch}, mas a branch atual tem alterações não commitadas. Commite ou guarde antes de continuar a sessão.`);
+    git(root, ["switch", state.branch]);
+  }
+  const previous: FixStatus = state.status;
+  const had = { commits: state.commits.length, tasks: new Set(state.guided_tasks.map((t) => t.id)) };
+  if (!isClean(root) && !commitPending(root, state, !!opts.skipHooks)) {
+    saveState(state);
+    return state;
+  }
+  runActions(root, opts.policyPath, actions, state, opts.params, !!opts.skipHooks, now);
+  const added_tasks = state.guided_tasks.map((t) => t.id).filter((id) => !had.tasks.has(id));
+  const changed = state.commits.length > had.commits || added_tasks.length > 0;
+  state.session = { reused: true, added_actions: changed ? actions.map((a) => a.id) : [], added_tasks, rounds: (state.session?.rounds ?? 1) + (changed ? 1 : 0) };
+  if (changed) {
+    state.actions = [...new Set([...state.actions, ...actions.map((a) => a.id)])];
+    state.params = { ...state.params, ...opts.params };
+    if ((state.status as FixStatus) !== "commit_blocked") state.status = "started";
+    delete state.after; // a nota "depois" precisa ser recalculada com a nova ação
+  } else if ((state.status as FixStatus) !== "commit_blocked") state.status = previous;
+  saveState(state);
+  return state;
+}
+
 export async function startFix(opts: StartOptions): Promise<FixState> {
   const root = topRoot(opts.root);
   const actions = resolveActions(opts.actionIds);
@@ -207,15 +263,13 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
   for (const a of actions) {
     for (const r of a.requires) if (r.blocking && !hasCommand(r.tool)) throw new FixError(`${a.id} exige ${r.tool}: ${r.why}`);
   }
+  const existing = loadState(root);
+  const now = opts.now ?? new Date();
+  if (existing && SESSION_OPEN.includes(existing.status) && branchExists(root, existing.branch)) return addToSession(opts, root, existing, actions, now);
   if (!isClean(root) && !opts.allowDirty) {
     throw new FixError("há alterações não commitadas na branch atual. Commite ou guarde (git stash) antes, ou use --allow-dirty (as alterações viajam para a branch nova, misturadas às da correção).");
   }
-  const existing = loadState(root);
-  if (existing && ["started", "commit_blocked", "sealed"].includes(existing.status) && branchExists(root, existing.branch)) {
-    throw new FixError(`já existe uma correção em andamento na branch ${existing.branch} (status ${existing.status}). Conclua com "fix finish" (merge, keep ou discard) antes de iniciar outra.`);
-  }
 
-  const now = opts.now ?? new Date();
   const baseBranch = currentBranch(root);
   const baseCommit = headSha(root);
   if (!baseCommit) throw new FixError("o repositório não tem commits");
@@ -240,6 +294,7 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
     params: opts.params,
     created_at: now.toISOString(),
     status: "started",
+    session: { reused: false, added_actions: actions.map((a) => a.id), added_tasks: [], rounds: 1 },
     guided_tasks: [],
     post_steps: [],
     notes: [],
@@ -248,6 +303,7 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
   };
 
   runActions(root, opts.policyPath, actions, state, opts.params, !!opts.skipHooks, now);
+  state.session!.added_tasks = state.guided_tasks.map((t) => t.id);
   if (state.status === "commit_blocked") {
     saveState(state);
     return state;
@@ -308,18 +364,8 @@ export async function sealFix(opts: { root: string; rubricPath: string; policyPa
   if (!["started", "commit_blocked", "sealed"].includes(state.status)) throw new FixError(`a correção está ${state.status}; nada a selar`);
   if (currentBranch(root) !== state.branch) throw new FixError(`você não está na branch da correção. Rode: git switch ${state.branch}`);
 
-  if (!isClean(root)) {
-    try {
-      const ids = state.guided_tasks.map((t) => t.id).join(", ");
-      const c = commit(root, null, `docs(repo-score): ajustes${ids ? ` guiados (${ids})` : ""}`, !!opts.skipHooks);
-      if (c) state.commits.push(c);
-      delete state.blocked;
-      state.status = "started";
-    } catch (e) {
-      state.status = "commit_blocked";
-      state.blocked = { action: state.blocked?.action ?? "guided", output: e instanceof GitError ? e.stderr || e.message : (e as Error).message };
-    }
-  } else if (state.status === "commit_blocked") {
+  if (!isClean(root)) commitPending(root, state, !!opts.skipHooks);
+  else if (state.status === "commit_blocked") {
     delete state.blocked;
     state.status = "started";
   }
@@ -328,6 +374,8 @@ export async function sealFix(opts: { root: string; rubricPath: string; policyPa
   const after = await analyze({ root, rubricPath: opts.rubricPath, groups: state.groups, ...(opts.policyPath ? { policyPath: opts.policyPath } : {}), ...(opts.now ? { now: opts.now } : {}) });
   const persisted = persist(after.outDir, after.data, renderReport(after.data));
   state.after = summarize(after.data);
+  // ações da sessão que ainda têm ganho de nota medido (ação só com tarefa sem efeito na nota não entra)
+  state.pending = after.data.fixes.filter((f) => state.actions.includes(f.id) && f.prompt !== null && (f.potential?.gain_total ?? 0) > 0).map((f) => ({ id: f.id, title: f.title, gain: f.potential!.gain_total }));
   if (state.status !== "commit_blocked") state.status = "sealed";
   saveState(state);
   const files = tryGit(root, ["diff", "--stat", `${state.base_commit}...HEAD`]) ?? "";

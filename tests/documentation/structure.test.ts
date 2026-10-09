@@ -26,6 +26,7 @@ describe("Documentação é um módulo separado dos demais grupos", () => {
       /^src\/collectors\/context$/, // tipos e helpers de coletor
       /^src\/remediation\/(types|changes)$/,
       /^src\/schema\//,
+      /^src\/scorer\//, // biblioteca pura de pontuação
       /^src\/util\//,
       /^src\/groups\/types$/,
     ];
@@ -40,7 +41,7 @@ describe("Documentação é um módulo separado dos demais grupos", () => {
   });
 
   it("nenhum outro código de produção importa de dentro do grupo, exceto os pontos de composição", () => {
-    const composition = new Set(["src/policy.ts", "src/groups/index.ts"]);
+    const composition = new Set(["src/policy.ts", "src/groups/index.ts", "src/cli/main.ts"]); // pontos que compõem os módulos
     const bad: string[] = [];
     for (const f of files(src()).filter((x) => x.endsWith(".ts") && !x.startsWith(docDir))) {
       const rel = path.relative(root, f);

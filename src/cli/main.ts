@@ -5,6 +5,10 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { analyze, persist, type ReportData } from "../analyze.js";
 import { enabledGroups, resetUserEnabled, setUserEnabled, userConfigPath } from "../groups-config.js";
+import { createCtx } from "../collectors/context.js";
+import { loadPolicy } from "../policy.js";
+import { formatLint, lintSpecs } from "../groups/documentation/sdd/discovery/lint.js";
+import { formatSimulation, simulateSdd } from "../groups/documentation/sdd/discovery/simulate.js";
 import { formatPlan, plan } from "../plan.js";
 import { finishFix, FixError, loadState, parseParams, previewFixes, resumeFix, sealFix, startFix, type Decision } from "../remediation/engine.js";
 import { formatFinish, formatPreview, formatSeal, formatStart, formatState, formatSuggestions } from "../remediation/format.js";
@@ -33,6 +37,12 @@ const USAGE = `repo-score <comando>
       Ativa os grupos informados (grava em ~/.repo-score/config.json). groups reset volta ao padrão da skill.
       Também vale a variável REPO_SCORE_ENABLED_GROUPS (ids separados por vírgula, ou all).
 
+  sdd simulate <caminho-do-repo> [--max-specs N] [--json]
+      Simula do zero a adoção do SDD (detecção, documentos, código, plano de specs, guardrails, tokens e nota).
+      Só leitura: nada é criado no repo.
+  sdd lint <caminho-do-repo>
+      Verifica as specs de docs/specs contra o padrão (4 blocos, tamanho, ponteiros Arquivo: existentes).
+
   fixes <caminho-do-repo> [--groups a,b] [--json]
       Lista as ações de correção dos grupos avaliados, com melhoria potencial de nota, tokens e pré-requisitos.
   fix preview <repo> --actions a,b [--param k=v ...]
@@ -54,7 +64,7 @@ function flag(args: string[], name: string): string | undefined {
   return i >= 0 ? args[i + 1] : undefined;
 }
 
-const VALUE_FLAGS = ["policy", "out", "groups", "rubric", "results", "repo-root", "actions", "param", "decision", "branch"];
+const VALUE_FLAGS = ["max-specs", "policy", "out", "groups", "rubric", "results", "repo-root", "actions", "param", "decision", "branch"];
 
 const flagAll = (args: string[], name: string): string[] => args.flatMap((a, i) => (a === `--${name}` && args[i + 1] !== undefined ? [args[i + 1]!] : []));
 
@@ -229,6 +239,33 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (cmd === "sdd") {
+    const [sub, ...rest] = args;
+    const target = positional(rest);
+    if (!sub || !target) {
+      console.error("uso: sdd <simulate|lint> <repo>\n\n" + USAGE);
+      return 2;
+    }
+    const policyPath = flag(rest, "policy");
+    if (sub === "simulate") {
+      const maxSpecs = flag(rest, "max-specs");
+      const root = path.resolve(target);
+      const { policy } = loadPolicy(root, policyPath);
+      const base = await analyze({ root, rubricPath: defaultRubricPath(), groups: ["documentation"], ...(policyPath ? { policyPath } : {}), outDir: path.join(os.tmpdir(), "repo-score-simulate") });
+      const report = simulateSdd(createCtx(root, policy), { rubric: base.rubric, input: base.input, result: base.data.result, meta: { repo: base.data.meta.repo, branch: base.data.meta.branch, commit: base.data.meta.commit } }, maxSpecs ? { maxSpecs: Number(maxSpecs) } : {});
+      console.log(rest.includes("--json") ? JSON.stringify(report, null, 2) : formatSimulation(report));
+      return 0;
+    }
+    if (sub === "lint") {
+      const root = path.resolve(target);
+      const { policy } = loadPolicy(root, policyPath);
+      const results = lintSpecs(createCtx(root, policy));
+      console.log(rest.includes("--json") ? JSON.stringify(results, null, 2) : formatLint(results));
+      return results.some((r) => r.issues.some((i) => i.level === "error")) ? 1 : 0;
+    }
+    throw new Error(`subcomando desconhecido: sdd ${sub}`);
+  }
+
   if (cmd === "fixes") {
     const target = positional(args);
     if (!target) {
@@ -259,7 +296,8 @@ async function main(argv: string[]): Promise<number> {
     if (sub === "preview") {
       if (actionIds.length === 0) throw new FixError("informe --actions (veja `fixes`)");
       const items = previewFixes({ root: target, actionIds, params, ...(policyPath ? { policyPath } : {}) });
-      out(items, formatPreview(items));
+      const open = loadState(path.resolve(target));
+      out(items, formatPreview(items, open && ["started", "commit_blocked", "sealed"].includes(open.status) ? open : null));
       return 0;
     }
     if (sub === "start") {

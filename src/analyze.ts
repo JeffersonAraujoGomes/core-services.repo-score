@@ -14,34 +14,14 @@ import { compareRuns, type RunSummary } from "./scorer/compare.js";
 import { score, type ScoreResult } from "./scorer/score.js";
 import { verifyResults, type VerifyIssue } from "./verify/verify-evidence.js";
 
-export const TOOL_VERSION = "0.1.0";
+import { finalGrade, MIN_COVERAGE_FOR_GRADE, type FinalGrade } from "./scorer/final-grade.js";
+export { finalGrade, MIN_COVERAGE_FOR_GRADE, type FinalGrade };
 
-/**
- * Abaixo desta fração do peso medido (dentro do escopo escolhido), a nota é E: sem medição suficiente
- * não há evidência para atribuir mais que isso. Regra de apresentação sobre o resultado do motor.
- */
-export const MIN_COVERAGE_FOR_GRADE = 0.5;
+export const TOOL_VERSION = "0.1.0";
 
 /** Motivo dos critérios de grupos que o usuário não escolheu avaliar. */
 export const OUT_OF_SCOPE = "grupo fora do escopo desta análise";
 
-export interface FinalGrade {
-  grade: Grade;
-  /** Letra que o motor calculou sobre o que foi medido (null se nada foi medido). */
-  computed_grade: Grade | null;
-  /** Por que a nota final difere da calculada, ou null. */
-  reason: "insufficient_coverage" | "nothing_measured" | null;
-}
-
-export function finalGrade(result: ScoreResult, minCoverage = MIN_COVERAGE_FOR_GRADE): FinalGrade {
-  if (result.total === null || result.grade === null) {
-    return { grade: "E", computed_grade: result.grade, reason: "nothing_measured" };
-  }
-  if (result.coverage.weight_ratio + 1e-9 < minCoverage) {
-    return { grade: "E", computed_grade: result.grade, reason: "insufficient_coverage" };
-  }
-  return { grade: result.grade, computed_grade: result.grade, reason: null };
-}
 
 export interface Opportunity {
   id: string;
@@ -162,6 +142,9 @@ export function resolveGroups(rubric: Rubric, groups?: string[]): string[] {
 export interface AnalyzeOutput {
   data: ReportData;
   outDir: string;
+  /** Resultados verificados e rubrica usados no cálculo (para simulações e projeções; não são serializados). */
+  input: ResultsFile;
+  rubric: Rubric;
 }
 
 export async function analyze(opts: AnalyzeOptions): Promise<AnalyzeOutput> {
@@ -260,7 +243,7 @@ export async function analyze(opts: AnalyzeOptions): Promise<AnalyzeOutput> {
     fixes: buildSuggestions({ root, ctx, rubric, input, base: result, groups: selected }),
     criteria,
   };
-  return { data, outDir };
+  return { data, outDir, input, rubric };
 }
 
 /** Grava resultado e histórico; mantém os 20 relatórios mais recentes. */

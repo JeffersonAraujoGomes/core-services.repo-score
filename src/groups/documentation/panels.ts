@@ -2,6 +2,7 @@ import type { Ctx } from "../../collectors/context.js";
 import { hasCommand } from "../../util/proc.js";
 import type { Panel, PanelItem } from "../types.js";
 import { ruleUniverse } from "./collectors/d7-specs-rules.js";
+import { lintSpecs } from "./sdd/discovery/lint.js";
 import { getDocIndex } from "./shared/docs-set.js";
 import { readManifest } from "./shared/manifest.js";
 
@@ -32,6 +33,16 @@ export function sddHealth(ctx: Ctx): SddHealth {
         ? { label: "Specs", status: "fail", detail: `${m.manifest.specsDir}/ sem documentos` }
         : { label: "Specs", status: idx.fileSet.has(`${dir}README.md`) ? "ok" : "warn", detail: `${specs.length} documentos${idx.fileSet.has(`${dir}README.md`) ? ", com índice" : ", sem README.md de índice"}` },
     );
+    const lint = lintSpecs(ctx, m.manifest.specsDir);
+    if (lint.length > 0) {
+      const errors = lint.filter((r) => r.issues.some((i) => i.level === "error")).length;
+      const warns = lint.filter((r) => r.issues.length > 0 && !r.issues.some((i) => i.level === "error")).length;
+      items.push({
+        label: "Padrão das specs",
+        status: errors > 0 ? "fail" : warns > 0 ? "warn" : "ok",
+        detail: `${lint.length - errors - warns} de ${lint.length} conformes (4 blocos, até 120 linhas, ponteiros válidos)${errors || warns ? `; ${errors} com erro, ${warns} com aviso: repo-score sdd lint` : ""}`,
+      });
+    }
     let total = 0;
     let broken = 0;
     for (const d of specs) for (const r of idx.refs.get(d.rel) ?? []) (total += 1, r.resolved === null && (broken += 1));

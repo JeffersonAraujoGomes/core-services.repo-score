@@ -1,14 +1,12 @@
 import path from "node:path";
 import type { Evidence } from "../../../schema/evidence.js";
-import { capEvidence, isTestPath, jobEvidence, measured, round, unmeasured, type Collector, type Ctx } from "../../../collectors/context.js";
+import { capEvidence, jobEvidence, measured, round, unmeasured, type Collector, type Ctx } from "../../../collectors/context.js";
 import { pathspecToRegex } from "../../../util/glob.js";
 import { dirname, getDocIndex } from "../shared/docs-set.js";
 import { readManifest } from "../shared/manifest.js";
+import { classifyRuleFile, CODE_EXT, isRuleCandidate, isTestLike } from "../shared/rule-files.js";
 
-const CODE_EXT = /\.(cs|fs|vb|go|kt|kts|java|scala|ts|tsx|js|jsx|mjs|py|rb|php|rs|swift|c|cc|cpp|h|hpp|sql)$/i;
-/** Pastas só de dados/contratos/mensagens e interfaces: não carregam regra, então não entram como "irmãos" do universo. */
-const DATA_DIR = /(^|\/)(Dtos?|Models?|Entities|Commands|Migrations|RepositoryInterfaces|Interfaces|Properties)(\/|$)/i;
-const INTERFACE_FILE = /^I[A-Z][A-Za-z0-9]*\.[a-z]+$/;
+export { isRuleCandidate };
 
 export interface RuleGlobs {
   globs: string[];
@@ -25,12 +23,7 @@ export function ruleGlobs(ctx: Ctx): RuleGlobs {
 
 export function ruleFiles(ctx: Ctx, globs: string[]): string[] {
   const res = globs.map(pathspecToRegex);
-  return ctx.files.filter((f) => CODE_EXT.test(f) && !isTestPath(f) && res.some((re) => re.test(f)));
-}
-
-/** Arquivo de código que pode conter regra de negócio (não é teste, DTO, modelo, comando ou interface). */
-export function isRuleCandidate(rel: string): boolean {
-  return CODE_EXT.test(rel) && !isTestPath(rel) && !DATA_DIR.test(rel) && !INTERFACE_FILE.test(path.posix.basename(rel));
+  return ctx.files.filter((f) => CODE_EXT.test(f) && !isTestLike(f) && res.some((re) => re.test(f)));
 }
 
 /** Documentos que contam como "specs": a pasta do manifest, ou todos os docs se não há manifest. */
@@ -95,7 +88,11 @@ export function ruleUniverse(ctx: Ctx): RuleUniverse | null {
   const cited = new Map([...citedCode(ctx)].filter(([f]) => !isExcluded(f) && (isRuleCandidate(f) || declaredSet.has(f))));
   const known = new Set([...declared, ...cited.keys()]);
   const dirs = new Set([...known].map(dirname));
-  const siblings = ctx.files.filter((f) => isRuleCandidate(f) && !isExcluded(f) && dirs.has(dirname(f)) && !known.has(f));
+  const siblings = ctx.files.filter((f) => {
+    if (isExcluded(f) || !dirs.has(dirname(f)) || known.has(f) || !isRuleCandidate(f)) return false;
+    const text = ctx.readText(f);
+    return text !== null && classifyRuleFile(f, text).rule; // mesma definição de "regra" da descoberta
+  });
   const universe = [...new Set([...declared, ...cited.keys(), ...siblings])].sort();
 
   return {
@@ -135,7 +132,7 @@ export const d7SpecsRules: Collector = {
     const evidence: Evidence[] = [
       ...u.citedOutsidePerimeter.map((f) => ({ kind: "file" as const, path: f, line: 1, note: `citada por ${u.cited.get(f)![0]}, fora do perímetro (ruleCodeGlobs): o SDD não vigia este arquivo` })),
       ...u.declaredUncited.map((f) => ({ kind: "file" as const, path: f, line: 1, note: "no perímetro, mas nenhuma spec a cita" })),
-      ...u.siblingsUncited.map((f) => ({ kind: "file" as const, path: f, line: 1, note: "irmã das regras conhecidas, sem spec nem perímetro (heurística)" })),
+      ...u.siblingsUncited.map((f) => ({ kind: "file" as const, path: f, line: 1, note: "irmã das regras conhecidas (mesma pasta, com lógica de negócio), sem spec nem perímetro (heurística)" })),
     ];
     const value = round((u.linked.length / u.universe.length) * 100, 1);
     if (evidence.length === 0) {

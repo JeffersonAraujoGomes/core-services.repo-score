@@ -1,0 +1,171 @@
+SIMULAÇÃO DO SDD — nada foi criado, alterado ou commitado
+Repo: corp-trsy.accounting-services (main@6ebfd53)  /Users/U003365/Documents/GitHub/corp-trsy.accounting-services
+Legenda: [●] script, 0 tokens · [◆] o Claude trabalha, gasta tokens · [?] você decide
+
+── PASSO A PASSO ───────────────────────────────────────────────────────────────────────────────
+ 1/8 [●] Detectar SDD ............ SDD AUSENTE: docs/ existe, mas docs/specs não: SDD ausente (manifest: missing, hooks: não)
+ 2/8 [●] Inventariar documentos .. 34 documentos: 13 com regras de negócio (converter), 21 descartados
+ 3/8 [●] Descobrir código de regra  21 arquivos de regra em 5 app(s); 132 de infraestrutura e 113 de baixa densidade ignorados
+ 4/8 [●] Planejar as specs ....... 38 specs no padrão; perímetro de 18 glob(s)
+ 5/8 [●] Guardrails (hooks) ...... 11 arquivos a criar, 0 tokens
+ 6/8 [?] Prévia e custo .......... ≈ 396.000–905.000 tokens (central 566.000) · ≈ 9 min com 6 lote(s)
+ 7/8 [◆] Criar as specs .......... 6 lote(s) de até 6 specs, em paralelo
+ 8/8 [●] Validar e recalcular ..... lint do padrão + nota medida na branch nova
+
+── 1. DETECÇÃO ─────────────────────────────────────────────────────────────────────────────────
+  docs/specs na raiz: não existe · docs/: existe · .sdd/manifest.json: missing · .githooks: não existe
+
+── 2. DOCUMENTOS EXISTENTES ────────────────────────────────────────────────────────────────────
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_VALOR_PRESENTE_PARCELAS.md  (109 tok, sinal alto) → spec 04.5
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_CALCULO_DIAS_ATRASO.md  (130 tok, sinal alto) → spec 04.4
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_OPERACAO_PERDA.md  (194 tok, sinal alto) → spec 04.6
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_ALGORITMO_VALOR_PRESENTE.md  (305 tok, sinal alto) → spec 04.7
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_ABERTURA_DIA.md  (143 tok, sinal alto) → spec 04.8
+  converter  apps/corp-trsy.accounting-routines/docs/ANALISE_CALCULOS_FINANCEIROS.md  (1.922 tok, sinal alto) → spec 04.9 a 04.10
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_PROCESSAMENTO_CORBAN.md  (153 tok, sinal alto) → spec 04.11
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_NOTIFICACAO_RISCO.md  (235 tok, sinal alto) → spec 04.12
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_FECHAMENTO_DIA.md  (227 tok, sinal alto) → spec 04.13
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_ALGORITMO_APROPRIACAO_JUROS.md  (324 tok, sinal médio) → spec 04.14
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_ORQUESTRACAO_GLOBAL.md  (192 tok, sinal médio) → spec 04.15
+  converter  apps/corp-trsy.accounting-routines/docs/FLUXOGRAMA_APROPRIACAO_JUROS.md  (249 tok, sinal médio) → spec 04.16
+  converter  apps/corp-trsy.accounting-routines/docs/ANALISE_COMPLETA_DE_NEGOCIO.md  (3.852 tok, sinal médio) → spec 04.17 a 04.20
+  descartados (21): CONTRIBUTORS.md, CONTRIBUTORS.md, README.md, migracao-sqlserver-para-postgresql.md, README.md, README.md, …
+
+── 3. CÓDIGO DE REGRA POR APP ──────────────────────────────────────────────────────────────────
+  corp-trsy.accounting-api                         1 arquivos de regra → 1 specs
+  corp-trsy.accounting-listener-worker            10 arquivos de regra → 8 specs
+  corp-trsy.accounting-routines                    8 arquivos de regra → 4 specs
+  corp-trsy.accounting-routines-trigger-job        0 arquivos de regra → 0 specs
+  corp-trsy.matera-integration-worker              1 arquivos de regra → 1 specs
+  corp-trsy.matera-listener-worker                 1 arquivos de regra → 1 specs
+
+── 4. PLANO DE SPECS (padrão: 4 blocos, alvo 80 e máximo 120 linhas, ponteiros Arquivo:) ───────
+  id     tipo          ptrs  cód.lin  tokens  arquivo / recorte
+  00     visão geral      1            2.400  00-visao-geral.md
+  01     glossário        4            7.695  01-glossario-e-invariantes.md
+  02     orquestração     1            2.400  02-visao-do-app-corp-trsy-accounting-api.md
+  02.1   regra            1      153   8.075  02.1-credit-operation-service.md
+  03     orquestração     2            2.400  03-visao-do-app-corp-trsy-accounting-listener-worke.md
+  03.1   regra            1      263  12.678  03.1-disbursement-confirmed-handler.md
+  03.2   regra            1      340  18.199  03.2-installment-settled-handler.md
+  03.3   regra            1      230  11.888  03.3-installment-reopened-handler.md
+  03.4   regra            1      118   6.444  03.4-client-risk-impaired-handler.md
+  03.5   regra            1      132   6.378  03.5-insert-corban-operation-settled.md
+  03.6   regra            2      286  14.313  03.6-operation-modified-handler-e-correlatos-2-arquiv.md
+  03.7   regra            2      144   7.789  03.7-price-calculator-service-e-correlatos-2-arquivos.md
+  03.8   regra            1       76   5.021  03.8-installment-awaiting-settlement-consumer.md
+  04     orquestração     2            2.400  04-visao-do-app-corp-trsy-accounting-routines.md
+  04.1   regra            2      370  13.792  04.1-accrual-post-fixed-queries-e-correlatos-2-arquiv.md
+  04.2   regra            2      304  12.221  04.2-accrual-queries-e-correlatos-2-arquivos-de-queri.md
+  04.3   regra            2      261  11.134  04.3-installment-present-value-queries-e-correlatos-2.md
+  04.4   regra            2      330  13.109  04.4-credit-operation-daily-entry-repository-e-correl.md  ⟵ FLUXOGRAMA_CALCULO_DIAS_ATRASO.md
+  05     orquestração     1            2.400  05-visao-do-app-corp-trsy-matera-integration-worker.md
+  05.1   regra            1       90   5.298  05.1-cadastrar-guia-matera-service.md
+  06     orquestração     1            2.400  06-visao-do-app-corp-trsy-matera-listener-worker.md
+  06.1   regra            1      133   6.945  06.1-cadastrar-guia-matera-service.md
+  04.5   convertida       2            7.722  04.5-fluxograma-valor-presente-parcelas.md  ⟵ FLUXOGRAMA_VALOR_PRESENTE_PARCELAS.md
+  04.6   convertida       1            4.325  04.6-fluxograma-operacao-perda.md  ⟵ FLUXOGRAMA_OPERACAO_PERDA.md
+  04.7   convertida       2            7.977  04.7-fluxograma-algoritmo-valor-presente.md  ⟵ FLUXOGRAMA_ALGORITMO_VALOR_PRESENTE.md
+  04.8   convertida       1            5.596  04.8-fluxograma-abertura-dia.md  ⟵ FLUXOGRAMA_ABERTURA_DIA.md
+  04.9   convertida       1            5.154  04.9-analise-calculos-financeiros-parte-1-de-2.md  [seções: Cálculo de Valor Presente de Parcelas (InstallmentPresentValue); Fórmula Principal; Implementação no SQL; Exemplo Prático de Cálculo…]  ⟵ ANALISE_CALCULOS_FINANCEIROS.md
+  04.10  convertida       1            5.154  04.10-analise-calculos-financeiros-parte-2-de-2.md  [seções: Regras de Parada de Apropriação; Condições de Parada; Data Base para Cálculo; Tipos de Lançamentos Contábeis…]  ⟵ ANALISE_CALCULOS_FINANCEIROS.md
+  04.11  convertida       2           11.301  04.11-fluxograma-processamento-corban.md  ⟵ FLUXOGRAMA_PROCESSAMENTO_CORBAN.md
+  04.12  convertida       3            9.297  04.12-fluxograma-notificacao-risco.md  ⟵ FLUXOGRAMA_NOTIFICACAO_RISCO.md
+  04.13  convertida       1            5.705  04.13-fluxograma-fechamento-dia.md  ⟵ FLUXOGRAMA_FECHAMENTO_DIA.md
+  04.14  convertida       2           11.523  04.14-fluxograma-algoritmo-apropriacao-juros.md  ⟵ FLUXOGRAMA_ALGORITMO_APROPRIACAO_JUROS.md
+  04.15  convertida       1            5.660  04.15-fluxograma-orquestracao-global.md  ⟵ FLUXOGRAMA_ORQUESTRACAO_GLOBAL.md
+  04.16  convertida       1            5.734  04.16-fluxograma-apropriacao-juros.md  ⟵ FLUXOGRAMA_APROPRIACAO_JUROS.md
+  04.17  convertida       3            7.039  04.17-analise-completa-de-negocio-parte-1-de-4.md  [seções: Identificação de Todos os Processos de Negócio Centrais; Análise Detalhada de CADA Fluxo de Processamento (End-to-End); Análise do Processo: Apropriação de Juros (InterestAccrual); Análise do Processo: Abertura de Dia (OpenDay)]  ⟵ ANALISE_COMPLETA_DE_NEGOCIO.md
+  04.18  convertida       3            7.039  04.18-analise-completa-de-negocio-parte-2-de-4.md  [seções: Análise do Processo: Fechamento de Dia (CloseDay); Análise do Processo: Cálculo de Dias em Atraso (ArrearDays); Análise do Processo: Notificação de Risco (NotifyRisk); Análise do Processo: Processamento de Operação em Perda (LossOperation)]  ⟵ ANALISE_COMPLETA_DE_NEGOCIO.md
+  04.19  convertida       3            7.039  04.19-analise-completa-de-negocio-parte-3-de-4.md  [seções: Análise do Processo: Processamento Corban (Corban); Análise do Processo: Cálculo de Valor Presente de Parcelas (InstallmentPresentValue); Fluxo de Orquestração Global; Pontos de Integração Externa]  ⟵ ANALISE_COMPLETA_DE_NEGOCIO.md
+  04.20  convertida       3            7.039  04.20-analise-completa-de-negocio-parte-4-de-4.md  [seções: Padrões Arquiteturais Identificados; Cálculos Financeiros e Algoritmos; Principais Fórmulas Utilizadas]  ⟵ ANALISE_COMPLETA_DE_NEGOCIO.md
+  perímetro (ruleCodeGlobs): apps/corp-trsy.accounting-api/Corp.Trsy.Accounting.Api/Grpc/*, apps/corp-trsy.accounting-listener-worker/Corp.Trsy.Accounting.Listener.Worker.Application/Handler/ClientRiskImpaired/*, apps/corp-trsy.accounting-listener-worker/Corp.Trsy.Accounting.Listener.Worker.Application/Handler/Disbursement/*, apps/corp-trsy.accounting-listener-worker/Corp.Trsy.Accounting.Listener.Worker.Application/Handler/Installment/*, … (+14)
+
+── 5. GUARDRAILS (iguais aos do risk-services) ─────────────────────────────────────────────────
+  criar                  .sdd/manifest.json
+  criar (executável)     .githooks/pre-commit
+  criar (executável)     .githooks/sdd-analyze
+  criar (executável)     .githooks/post-commit
+  criar (executável)     .githooks/pre-push
+  criar (executável)     .claude/hooks/spec-change-guard.sh
+  criar                  .claude/settings.json
+  alterar                .gitignore
+  alterar                README.md
+  criar                  docs/specs/README.md
+  criar                  .claude/skills/sdd-accounting-services/SKILL.md
+  pré-requisito git: ok — branch nova e histórico
+  pré-requisito jq: ok — os hooks leem o manifest com jq e ficam inativos sem ele
+  pré-requisito claude: ok — o sdd-analyze usa claude -p (tokens de quem commita spec)
+  fora da branch (passo à parte, com a sua confirmação): git config core.hooksPath .githooks
+
+── 6. PREVISÃO DE TOKENS ───────────────────────────────────────────────────────────────────────
+    288.683  Leitura do código e escrita de 38 specs
+    240.000  Partida fria de 6 lote(s) de subagente (padrão, índice, exemplos)
+     15.000  Visão geral, glossário e índice
+     12.000  Preencher a skill de domínio
+     10.000  Verificação (lint, ponteiros, nota)
+  ─────────
+    566.000  central · faixa 396.000–905.000 · calibrado em 1 execução real (previsto 96–295 mil, realizado ≈ 460 mil); a faixa alta cobre o desvio observado
+  custo recorrente do SDD: cada commit de spec roda claude -p (sdd-analyze) na conta de quem commita
+
+── 7. ESQUELETO QUE CADA TAREFA RECEBE (exemplo) ───────────────────────────────────────────────
+  │ # 02.1 — Credit Operation Service
+  │ 
+  │ > Parte de: [02 — Visão do app corp-trsy.accounting-api](./02-visao-do-app-corp-trsy-accounting-api.md)
+  │ 
+  │ ## O que a regra faz
+  │ 
+  │ <2 a 5 frases com o comportamento ATUAL, em linguagem de negócio. Uma regra por documento.>
+  │ 
+  │ ## Parâmetros
+  │ 
+  │ <tabela com limiares, constantes, enums e entradas que mudam o resultado, com o valor atual. Se não há parâmetros, escreva "Sem parâmetros:" e diga por quê.>
+  │ 
+  │ ## Contexto
+  │ 
+  │ <por que a regra existe, ligação com outras specs (links), fragilidades marcadas com ⚠️ Risco e decisões conhecidas. Se não há nada, diga o que foi verificado.>
+  │ 
+  │ ---
+  │ 
+  │ ## Referências técnicas
+  │ 
+  │ > Cada linha começando com `Arquivo:` é lida pelo gate de commit. Caminho relativo à raiz do repo, sem número de linha, uma por linha.
+  │ 
+  │ Arquivo: apps/corp-trsy.accounting-api/Corp.Trsy.Accounting.Api/Grpc/CreditOperationService.cs
+  blocos obrigatórios, nesta ordem: O que a regra faz · Parâmetros · Contexto · Referências técnicas
+
+── 8. NOTA DE DOCUMENTAÇÃO: HOJE × PROJEÇÃO ────────────────────────────────────────────────────
+  cenário                                                         nota  total  Doc%   D1 D2 D3 D4 D5 D6 D7 D8
+  Hoje                                                             E       5.5   5.5    0  0  0  0  –  0  –  1
+  Depois do SDD (specs + guardrails + índice das specs)            E      31.8  31.8    0  0  0  1  2  1  2  1
+  SDD + demais ações (README, OWNERS, ADR, índice, higiene)        A      95.4  95.4    2  2  2  1  2  2  2  2
+  · Depois do SDD (specs + guardrails + índice das specs): teto: assume as specs escritas e validadas pelo lint; D1, D2, D3 e D8 não mudam com o SDD
+  · SDD + demais ações (README, OWNERS, ADR, índice, higiene): teto: assume também D1, D2, D3, D5, D6 e D8 em 2 pontos (a spec de código não cobre README, OWNERS, ADR nem os docs antigos órfãos)
+
+── JORNADA NA SKILL (o que o usuário verá, passo a passo) ──────────────────────────────────────
+  1. [●] Detectar SDD
+       $ repo-score plan "/Users/U003365/Documents/GitHub/corp-trsy.accounting-services"
+       procura docs/specs na raiz; confere pré-requisitos (git, jq, claude)
+  2. [●] Inventariar documentos e código
+       $ repo-score sdd simulate "/Users/U003365/Documents/GitHub/corp-trsy.accounting-services"
+       esta simulação; lê o repo e não escreve nada
+  3. [?] Prévia e confirmação com o custo em tokens
+       $ repo-score fix preview "/Users/U003365/Documents/GitHub/corp-trsy.accounting-services" --actions sdd-adopt
+       lista os arquivos que seriam criados; você confirma o gasto
+  4. [●] Criar a branch e os guardrails
+       $ repo-score fix start "/Users/U003365/Documents/GitHub/corp-trsy.accounting-services" --actions sdd-adopt
+       branch nova; manifest, hooks, settings, seção do README (0 tokens)
+  5. [◆] Criar as specs em lotes
+       $ (skill) subagentes por lote de até 6 specs
+       cada lote recebe o padrão, o esqueleto e os ponteiros; progresso por spec
+  6. [●] Validar o padrão
+       $ repo-score sdd lint "/Users/U003365/Documents/GitHub/corp-trsy.accounting-services"
+       4 blocos, tamanho, ponteiros Arquivo: existentes, sem número de linha
+  7. [●] Recalcular a nota na branch nova
+       $ repo-score fix seal "/Users/U003365/Documents/GitHub/corp-trsy.accounting-services"
+       antes/depois medidos, não estimados
+  8. [?] Decidir: merge, manter ou descartar
+       $ repo-score fix finish "/Users/U003365/Documents/GitHub/corp-trsy.accounting-services" --decision keep|merge|discard
+       nada é enviado; ativar hooks é passo à parte
+
+Nada foi escrito: nenhum arquivo, branch ou commit no repo. Esta saída pode ser repetida à vontade.

@@ -6,6 +6,11 @@ import { ruleUniverse, suggestPerimeterGlobs, type RuleUniverse } from "../colle
 import { getDocIndex } from "../shared/docs-set.js";
 import { MANIFEST_PATH, readManifest, type SddManifest } from "../shared/manifest.js";
 import { suggestRuleGlobs } from "./detect.js";
+import { lintSpecs } from "./discovery/lint.js";
+import { buildSpecPlanCached, type SpecPlan } from "./discovery/plan.js";
+import { audienceOfFile } from "./audience.js";
+import { STANDARD_BRIEF } from "./spec-standard.js";
+import { adoptionTasks, migrationTasks } from "./tasks.js";
 import { mergeClaudeSettings, mergeGitignore, mergeReadmeSection } from "./merge.js";
 import { HOOK_FILES, TEMPLATES } from "./templates.js";
 
@@ -58,7 +63,13 @@ export function gapInstructions(m: SddManifest, u: RuleUniverse, extraTargets: s
     `Completar o SDD de ${m.projectName || "este repositório"}: há regras de negócio sem spec. Pasta de specs: \`${m.specsDir}/\`.`,
     "",
     `Arquivos sem citação em nenhuma spec (${files.length}${files.length > shown.length ? `, mostrando ${shown.length}` : ""}); "irmão" = achado por heurística nas pastas das regras conhecidas e pode não ser regra:`,
-    ...shown.map((f) => `- \`${f}\`${u.declaredUncited.includes(f) ? " (no perímetro)" : " (irmão)"}`),
+    ...shown.map((f) => `- \`${f}\`${u.declaredUncited.includes(f) ? " (no perímetro)" : " (irmão)"} · [${audienceOfFile(f)}]`),
+    "",
+    "## Padrão (obrigatório)",
+    "",
+    STANDARD_BRIEF,
+    "",
+    "A marcação `[BUS]`/`[ENG]` ao lado de cada arquivo é a sugerida pelo script; use-a no nome da spec nova (`NN.k-BUS-tema.md` ou `NN.k-ENG-tema.md`) e no título. Specs novas seguem os 4 blocos e o limite de linhas.",
     "",
     "## Como proceder",
     "",
@@ -84,6 +95,8 @@ export function skillInstructions(m: SddManifest): string {
   ].join("\n");
 }
 
+const specAbsentNow = (ctx: Ctx, specsDir: string) => !ctx.files.some((f) => f.startsWith(`${specsDir.replace(/\/+$/, "")}/`));
+
 export function planSdd(ctx: Ctx, params: Record<string, string>): ActionPlan | null {
   const notes: string[] = [];
   const postSteps: string[] = [];
@@ -97,6 +110,11 @@ export function planSdd(ctx: Ctx, params: Record<string, string>): ActionPlan | 
   }
 
   const repoName = path.basename(ctx.root);
+  // SDD ausente = não há docs/specs na raiz. Nesse caso o plano de specs (documentos + código) guia tudo.
+  const wantedSpecsDir = (state.state === "ok" ? state.manifest.specsDir : params["specs_dir"] || "docs/specs").replace(/\/+$/, "");
+  const specsAbsent = !ctx.files.some((f) => f.startsWith(`${wantedSpecsDir}/`));
+  const maxSpecs = Number(params["max_specs"]) > 0 ? Number(params["max_specs"]) : undefined;
+  const specPlan: SpecPlan | null = specsAbsent && state.state !== "ok" ? buildSpecPlanCached(ctx, { specsDir: wantedSpecsDir, ...(maxSpecs ? { maxSpecs } : {}) }) : null;
   let manifest: SddManifest;
   if (state.state === "ok") {
     manifest = state.manifest;
@@ -111,8 +129,9 @@ export function planSdd(ctx: Ctx, params: Record<string, string>): ActionPlan | 
       specsDir: (params["specs_dir"] || "docs/specs").replace(/\/+$/, ""),
       skillSlug: slug,
       skillPath: `.claude/skills/${slug}/SKILL.md`,
-      ruleCodeGlobs: parseGlobs(params["rule_globs"]),
+      ruleCodeGlobs: parseGlobs(params["rule_globs"]).length ? parseGlobs(params["rule_globs"]) : (specPlan?.globs ?? []),
     };
+    if (specPlan && !params["rule_globs"]) notes.push(`Perímetro (ruleCodeGlobs) derivado do plano de specs: ${specPlan.globs.length} pasta(s) com regra de negócio. Revise antes de mesclar; --param rule_globs=a,b substitui.`);
     push({ op: "create", path: MANIFEST_PATH, content: JSON.stringify(manifest, null, 2) + "\n", note: "contrato lido pelos hooks (jq)" });
     if (manifest.ruleCodeGlobs.length === 0) {
       const sug = suggestRuleGlobs(ctx);
@@ -167,14 +186,9 @@ export function planSdd(ctx: Ctx, params: Record<string, string>): ActionPlan | 
   const skillText = skillExists ? ctx.readText(manifest.skillPath) : null;
   push(upsert(ctx, manifest.skillPath, render(TEMPLATES.skillTemplate, { SKILL_SLUG: manifest.skillSlug, PROJECT_NAME: manifest.projectName, SPECS_DIR: manifest.specsDir }), { createOnly: true, note: "rascunho com TODOs: preencha com a tarefa guiada" }));
 
-  const needsDiscovery = specsDocs.filter((d) => !/(^|\/)readme\.md$/i.test(d.rel)).length === 0;
-  if (needsDiscovery) {
-    guided.push({
-      id: "sdd-discovery",
-      title: "Descoberta: escrever as specs vivas",
-      instructions: discoveryInstructions(manifest),
-      targets: [`${manifest.specsDir}/`],
-    });
+  if (specPlan) {
+    guided.push(...adoptionTasks(manifest, specPlan));
+    for (const d of specPlan.deferred.slice(0, 1)) notes.push(`O plano tem ${specPlan.deferred.length} spec(s) adiada(s) por orçamento (ex.: ${d.title}); --param max_specs=N aumenta o limite.`);
   }
   if (!skillExists || (skillText !== null && /\bTODO\b/.test(skillText))) {
     guided.push({
@@ -214,6 +228,16 @@ export function planSdd(ctx: Ctx, params: Record<string, string>): ActionPlan | 
         instructions: gapInstructions(manifest, universe, [manifest.skillPath, ...skillLinks]),
         targets: [`${manifest.specsDir}/`, manifest.skillPath, ...skillLinks, "repo-score.policy.json"],
       });
+    }
+  }
+
+  // Specs que já existem mas fora do padrão (4 blocos, tamanho, ponteiros): migrar, preservando o conteúdo
+  if (!specAbsentNow(ctx, manifest.specsDir) && params["migrate"] !== "none") {
+    const lint = lintSpecs(ctx, manifest.specsDir);
+    const legacy = lint.filter((r) => r.issues.length > 0);
+    if (legacy.length > 0) {
+      guided.push(...migrationTasks(manifest, lint));
+      notes.push(`${legacy.length} de ${lint.length} specs existentes estão fora do padrão (${legacy.filter((r) => r.issues.some((i) => i.level === "error")).length} com erro); a migração preserva o conteúdo. --param migrate=none ignora.`);
     }
   }
 

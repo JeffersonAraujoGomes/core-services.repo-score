@@ -1,6 +1,6 @@
 ---
 name: repo-score
-description: Analisa a maturidade de um repositório git local contra o Platform Repository Maturity Score (rubrica v2.3) e abre um relatório visual no navegador, com nota E–S, gates, evidências por critério e o que mais sobe a nota. Guia o usuário passo a passo (repositório, grupos de análise ativados, pré-requisitos, previsão de tokens) e, em Documentação, propõe correções (inclusive adotar o SDD) numa branch nova. Use quando o usuário digitar "repo score", "reposcore", "repo-score" ou pedir "analise o meu repo", "nota de maturidade do repositório", "maturity score".
+description: Analisa a maturidade de um repositório git local contra o Platform Repository Maturity Score (rubrica v2.3) e abre um relatório visual no navegador, com nota E–S, gates, evidências por critério e o que mais sobe a nota. Guia o usuário passo a passo (repositório, pré-requisitos, dimensões que entram na nota) e, em Documentação, corrige cada ponto pelo botão "Otimizar nota" do relatório (inclusive adotar o SDD), sempre numa branch nova. Use quando o usuário digitar "repo score", "reposcore", "repo-score" ou pedir "analise o meu repo", "nota de maturidade do repositório", "maturity score".
 ---
 
 # repo-score
@@ -13,36 +13,32 @@ Os comandos usam o diretório base desta skill (informado quando ela foi carrega
 
 Para perguntar, use a ferramenta AskUserQuestion; se ela não existir, pergunte em texto e espere a resposta. Pule a pergunta cujo dado o usuário já deu no pedido.
 
-## Passo a passo
+## Jornada (`/repo-score`)
+
+A primeira etapa é **só medir e abrir o relatório**. Nada é alterado e nenhum token é gasto na medição. As correções vêm depois, uma por vez, pelo botão **Otimizar nota** do relatório.
 
 1. **Pré-requisito: Node.** Rode `node --version` (precisa de 20 ou mais). Se faltar ou for antigo, diga como instalar e pare, sem instalar nada por conta própria: macOS, instalador de nodejs.org ou `brew install node@20`; Windows, `winget install OpenJS.NodeJS.LTS`; Linux, nvm ou o gerenciador da distro. Peça para abrir um novo terminal depois.
 
-2. **Qual repositório?** Opções: o diretório atual (mostre o caminho, de `git rev-parse --show-toplevel`) ou outro caminho informado pelo usuário. URL git não é suportada: peça para clonar e informar o caminho.
+2. **Qual repositório?** O diretório atual (mostre o caminho, de `git rev-parse --show-toplevel`) ou outro caminho informado. URL git não é suportada: peça para clonar e informar o caminho.
 
-3. **Plano e pré-requisitos.** Rode `CLI plan "<repo>" --json` (não mede nada; exit 3 = bloqueio). Leia o JSON e mostre de forma curta:
-   - `blockers`: explique e pare;
-   - `tools` ausentes com `install` e `warnings`: liste o que falta instalar ou que reduz a medição (um item por linha, com o comando);
-   - se `repo.dirty`, avise que a análise considera alterações não commitadas.
+3. **Pré-requisitos.** Rode `CLI plan "<repo>" --json` (não mede nada; exit 3 = bloqueio). Mostre de forma curta: `blockers` (explique e pare), `tools` ausentes com o comando de instalação e `warnings` (um item por linha) e, se `repo.dirty`, que a análise considera alterações não commitadas.
 
-4. **Quais grupos avaliar?** Só os grupos **ativados** (`groups[].enabled: true` no JSON do `plan`; hoje apenas Documentação) podem ser escolhidos. Os demais aparecem como desativados e não são oferecidos.
-   - Se houver **mais de um** ativado, pergunte com seleção múltipla (até 4 opções por questão, mostrando peso e `measurable/criteria`), com a opção "Todos os ativados (Recomendado)".
-   - Se houver **só um**, não pergunte: informe qual grupo será avaliado e que os demais estão desativados.
-   - Para ativar outros grupos (escolha do usuário, vale para todos os repos dele): `CLI groups set documentation,security` (grava em `~/.repo-score/config.json`), `CLI groups reset` volta ao padrão, e `CLI groups` mostra o estado. A variável `REPO_SCORE_ENABLED_GROUPS` (ids ou `all`) tem precedência. O padrão da skill vem de `references/groups.json`.
-   - Se o usuário pedir um grupo desativado, explique e ofereça ativá-lo com `groups set`; não rode `analyze --groups` com ele (o comando recusa).
-   Depois rode `CLI plan "<repo>" --groups a,b --json` para recalcular a previsão do escopo.
+4. **Quais dimensões entram na nota?** **Sempre mostre as 7 dimensões e "Todas"**, mesmo as desativadas, e deixe o usuário escolher qualquer uma delas (seleção múltipla). Com AskUserQuestion (máximo de 4 opções por pergunta), use **duas perguntas na mesma chamada**:
+   - "Dimensões (1/2)": Segurança, Testes e CI, Código, Arquitetura;
+   - "Dimensões (2/2)": Operabilidade, Documentação, Processo, Todas.
+   Na descrição de cada opção, ponha o peso e `ativa` ou `desativada` (de `groups[].enabled` do JSON do `plan`; hoje só Documentação está ativa). Sem AskUserQuestion, liste as 8 opções em texto e espere a resposta. Se o usuário já nomeou as dimensões no pedido, pule a pergunta.
+   - **Desativada escolhida:** diga na resposta, por nome, que ela está desativada e não entra na nota nesta versão (sem coletor ou fora da configuração), e siga com as ativas escolhidas. Se não sobrar nenhuma ativa, explique e pergunte de novo. Ofereça, sem impor, ativar com `CLI groups set <ids>` (grava em `~/.repo-score/config.json`; `CLI groups reset` volta ao padrão; `REPO_SCORE_ENABLED_GROUPS` tem precedência; o padrão vem de `references/groups.json`). Nunca rode `analyze --groups` com grupo desativado: o comando recusa.
+   - **"Todas"** significa todas as **ativas**; avise quais ficaram de fora.
 
-5. **Previsão antes de rodar.** Mostre, a partir de `selection` e `estimate`:
-   - critérios no escopo e quantos têm medição automática, com `max_weight_coverage`;
-   - **tokens**: medição = 0 (scripts, sem modelo); conversa ≈ `session_tokens.low`–`high`; tempo ≈ `seconds` s. Diga que é estimativa de ordem de grandeza e que cada turno relê o contexto da conversa;
-   - se `grade_will_be_capped_at_e`, avise que a nota será **E por cobertura insuficiente** nesta versão, mesmo que tudo o que for medido passe.
+5. **Calcular a nota e abrir o relatório.** `CLI analyze "<repo>" --groups a,b` (omita `--groups` se for "Todas"). Leva poucos segundos, grava em `~/.repo-score/<repo>/` (nada é escrito no repo analisado) e abre o relatório no navegador; sem navegador, informe o caminho. Antes de rodar, diga numa linha que a medição custa 0 tokens, e **não peça confirmação**.
 
-   Pergunte: "Rodar agora (Recomendado)", "Mudar grupos" (volte ao passo 4) ou "Cancelar".
+6. **Resumir o resultado**, a partir da saída: a nota (sempre uma letra; E também significa cobertura insuficiente, e o resumo diz a pontuação medida); as dimensões que participaram e as que ficaram de fora; gates acionados (limitam a nota a C); os achados principais com `arquivo:linha`; os maiores ganhos; a variação em relação à análise anterior; o caminho do relatório. Seja explícito de que só parte dos 71 critérios tem coletor e a nota não equivale à oficial da plataforma. **Pare aqui.**
 
-6. **Rodar.** `CLI analyze "<repo>" --groups a,b` (omita `--groups` se forem todos). Leva poucos segundos, grava em `~/.repo-score/<repo>/` (nada é escrito no repo analisado) e abre o relatório no navegador. Sem navegador (SSH, remoto), só imprime o caminho: informe-o.
+7. **Como subir a nota.** Termine dizendo que cada ponto de "Como subir a nota" no relatório tem um botão **Otimizar nota**: ele copia um comando para colar nesta sessão e inicia só aquela correção, sempre numa branch nova. Não inicie correção por conta própria. Se o usuário pedir uma correção aqui no chat, trate como o modo abaixo.
 
-7. **Resumir o resultado**, a partir da saída: a nota (sempre uma letra; E também significa cobertura insuficiente, e o resumo diz a pontuação medida); gates acionados (limitam a nota a C); os achados principais com `arquivo:linha`; os maiores ganhos; a variação em relação à análise anterior; o caminho do relatório. Seja explícito de que só parte dos 71 critérios tem coletor nesta versão e a nota não equivale à oficial da plataforma.
+## Modo otimizar (`/repo-score otimizar <ação> "<repo>"`)
 
-8. **Plano de melhoria.** Se o grupo `documentation` foi avaliado e a nota de Documentação está abaixo de 100%, ofereça o plano e siga `references/documentation.md` (ações, SDD, branch nova, previsão de tokens e decisão de merge). Para outros grupos ainda não há ações de correção.
+É o que o botão **Otimizar nota** envia. Pule os passos 2 a 6 (não pergunte repo nem dimensões, não rode `analyze`) e execute **somente a ação indicada**, seguindo `references/documentation.md` (seção "Otimizar um ponto") para o grupo `documentation`. Resumo: `CLI fixes "<repo>" --groups <grupo> --json` para localizar a ação, prévia com `fix preview --actions <ação>`, **previsão de tokens e confirmação do usuário**, `fix start` (**branch nova**, a atual não é tocada), tarefas guiadas, `fix seal` (nota recalculada na branch), e o usuário decide merge, manter ou descartar. **Uma sessão, uma branch:** se o usuário clicar em outros botões, o `fix start` reaproveita a branch da sessão aberta (não cria outra); diga qual branch foi reaproveitada e não encerre com `fix finish` até o usuário dizer que acabou. Antes de cada ação, rode `CLI fix status "<repo>"` para saber se há sessão aberta. Se a ação não existir mais (o repo mudou), diga e sugira rodar `/repo-score` de novo. Outros grupos ainda não têm ações de correção: avise e não improvise.
 
 ## Cuidados
 

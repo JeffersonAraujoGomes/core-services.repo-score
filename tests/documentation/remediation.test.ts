@@ -24,6 +24,10 @@ afterAll(() => {
   else process.env["REPO_SCORE_HOME"] = prevHome;
 });
 
+/** Spec no padrão (4 blocos, ponteiros no bloco de referências) para as fixtures de SDD já adotado. */
+const stdSpec = (title: string, files: string[]) =>
+  `# ${title}\n\n## O que a regra faz\n\nDescreve o comportamento atual de ${title}.\n\n## Parâmetros\n\nSem parâmetros: a regra não depende de valores configuráveis.\n\n## Contexto\n\nExiste por causa da política interna; nada frágil foi encontrado.\n\n---\n\n## Referências técnicas\n\n${files.map((f) => `Arquivo: ${f}`).join("\n")}\n`;
+
 const start = (r: FixtureRepo, actionIds: string[], extra: Partial<Parameters<typeof startFix>[0]> = {}) =>
   startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds, params: {}, groups: ["documentation"], ...extra });
 const seal = (r: FixtureRepo, skipHooks = false) => sealFix({ root: r.root, rubricPath: RUBRIC_PATH, skipHooks });
@@ -103,16 +107,12 @@ describe("branch nova: a origem nunca é alterada", () => {
     expect(drop.git("branch", "--list", s3.branch).trim()).toBe("");
   });
 
-  it("recusa árvore suja sem --allow-dirty e recusa uma segunda correção enquanto a primeira não foi concluída", async () => {
+  it("recusa árvore suja sem --allow-dirty (a segunda correção reaproveita a sessão: ver 'sessão única')", async () => {
     const r = dirtyDocsRepo();
     r.write("novo.txt", "não commitado");
     await expect(start(r, ["doc-hygiene"])).rejects.toThrow(/alterações não commitadas/);
     expect(r.git("branch", "--list").trim().split("\n")).toHaveLength(1);
 
-    const clean = dirtyDocsRepo();
-    await start(clean, ["doc-hygiene"]);
-    clean.git("switch", "main");
-    await expect(start(clean, ["doc-hygiene"])).rejects.toThrow(/em andamento/);
   });
 
   it("sem trabalho a fazer não deixa branch para trás", async () => {
@@ -252,8 +252,9 @@ describe("adotar o SDD (port do sdd-bootstrap)", () => {
   function domainRepo(): FixtureRepo {
     const r = makeRepo();
     r.write("README.md", "# Pagamentos\nDescrição suficiente para não ser um documento vazio.");
-    r.write("src/Domain/Rules/A.cs", "class A { }");
-    r.write("src/Domain/Rules/B.cs", "class B { }");
+    const big = (n: string) => `class ${n} {\n${Array.from({ length: 30 }, (_, i) => `  int M${i}(int v) { if (v > ${i + 3}) { return v * ${i + 5}; } else if (v < ${i + 2}) { return ${i + 7}; } return v; }`).join("\n")}\n}\n`;
+    r.write("src/Domain/Rules/A.cs", big("A"));
+    r.write("src/Domain/Rules/B.cs", big("B"));
     r.commit("feat: inicial");
     return r;
   }
@@ -276,9 +277,15 @@ describe("adotar o SDD (port do sdd-bootstrap)", () => {
     expect(read(".claude/skills/sdd-pagamentos/SKILL.md")).toContain("name: sdd-pagamentos");
     expect(existsSync(path.join(r.root, ".github/workflows/spec-drift-check.yml"))).toBe(false);
 
-    expect(state.guided_tasks.map((t) => t.id)).toEqual(["sdd-discovery", "sdd-skill"]);
-    expect(state.guided_tasks[0]!.instructions).toContain("src/Domain/Rules/*");
-    expect(state.guided_tasks[0]!.instructions).toContain("Arquivo: caminho");
+    // as specs vêm do PLANO: lotes de specs, depois visão geral + índice, depois a skill
+    expect(state.guided_tasks.map((t) => t.id)).toEqual(["sdd-specs:1", "sdd-overview", "sdd-skill"]);
+    const batch = state.guided_tasks[0]!;
+    expect(batch.targets.every((t) => t.startsWith("docs/specs/"))).toBe(true);
+    for (const b of ["## O que a regra faz", "## Parâmetros", "## Contexto", "## Referências técnicas"]) expect(batch.instructions).toContain(b);
+    expect(batch.instructions).toContain("Arquivo: src/Domain/Rules/A.cs");
+    expect(batch.instructions).toContain("MÁXIMO de 120");
+    expect(state.guided_tasks[1]!.instructions).toContain("README.md");
+    expect(JSON.parse(read(".sdd/manifest.json")).ruleCodeGlobs).toEqual(["src/Domain/Rules/*"]);
     expect(state.post_steps.join(" ")).toContain("git config core.hooksPath .githooks");
     const hp = spawnSync("git", ["config", "core.hooksPath"], { cwd: r.root, encoding: "utf8" });
     expect(hp.stdout.trim()).toBe(""); // ativar é decisão à parte, fora da branch
@@ -301,7 +308,7 @@ describe("adotar o SDD (port do sdd-bootstrap)", () => {
     const r = domainRepo();
     await start(r, ["sdd-adopt"], { params: { rule_globs: "src/Domain/Rules/*" } });
     r.write("docs/specs/README.md", "# Specs\n[1](01.md)");
-    r.write("docs/specs/01.md", "# 1\nArquivo: src/Domain/Rules/A.cs\nArquivo: src/Domain/Rules/B.cs\n");
+    r.write("docs/specs/01-BUS-regras.md", stdSpec("Regras A e B", ["src/Domain/Rules/A.cs", "src/Domain/Rules/B.cs"]));
     const skillPath = JSON.parse(readFileSync(path.join(r.root, ".sdd/manifest.json"), "utf8")).skillPath as string;
     r.write(skillPath, "---\nname: sdd-x\n---\nSkill de domínio já preenchida pelo time.\n");
     await seal(r, true);
@@ -384,9 +391,10 @@ describe("completar um SDD já adotado (perímetro e specs faltantes)", () => {
     r.write(".sdd/manifest.json", JSON.stringify({ version: 1, projectName: "p", specsDir: "docs/specs", skillSlug: "sdd-p", skillPath: ".claude/skills/sdd-p/SKILL.md", ruleCodeGlobs: ["src/Rules/*"] }, null, 2) + "\n");
     r.write(".claude/skills/sdd-p/SKILL.md", "---\nname: sdd-p\n---\nSkill preenchida.\n");
     for (const h of HOOK_FILES) r.write(h.path, h.content);
-    for (const f of ["src/Rules/A.cs", "src/Rules/B.cs", "src/Handlers/H1.cs", "src/Handlers/H2.cs", "src/Handlers/H3.cs"]) r.write(f, "class X { }");
+    for (const f of ["src/Rules/A.cs", "src/Rules/B.cs", "src/Handlers/H1.cs", "src/Handlers/H2.cs"]) r.write(f, "class X { }");
+    r.write("src/Handlers/H3.cs", `class H3 {\n${Array.from({ length: 30 }, (_, i) => `  int M${i}(int v) { if (v > ${i + 3}) { return v * ${i + 5}; } else if (v < ${i + 2}) { return ${i + 7}; } return v; }`).join("\n")}\n}\n`);
     r.write("docs/specs/README.md", "# Specs\n[1](01.md)\n");
-    r.write("docs/specs/01.md", "# 1\nArquivo: src/Rules/A.cs\nArquivo: src/Handlers/H1.cs\nArquivo: src/Handlers/H2.cs\n");
+    r.write("docs/specs/01-BUS-regras.md", stdSpec("Regras e fluxos", ["src/Rules/A.cs", "src/Handlers/H1.cs", "src/Handlers/H2.cs"]));
     r.commit("feat: sdd com perímetro estreito");
     return r;
   }
@@ -420,7 +428,7 @@ describe("completar um SDD já adotado (perímetro e specs faltantes)", () => {
     expect(JSON.parse(readFileSync(path.join(r.root, ".sdd/manifest.json"), "utf8")).ruleCodeGlobs).toEqual(["src/Rules/*", "src/Handlers/*"]);
     expect(state.guided_tasks.map((t) => t.id)).toEqual(["sdd-gap-specs"]);
     // simula a tarefa guiada: specs cobrindo B e H3
-    r.write("docs/specs/02-complemento.md", "# 2\nArquivo: src/Rules/B.cs\nArquivo: src/Handlers/H3.cs\n");
+    r.write("docs/specs/02-BUS-complemento.md", stdSpec("Complemento", ["src/Rules/B.cs", "src/Handlers/H3.cs"]));
     r.write("docs/specs/README.md", "# Specs\n[1](01.md)\n[2](02-complemento.md)\n");
     const res = await seal(r, true);
     expect(res.state.baseline.criteria["D7"]).toBe(0); // 1 de 5
@@ -472,3 +480,86 @@ describe("sugestões no relatório", () => {
 
 void execFileSync;
 void FixError;
+
+
+describe("sessão única: vários cliques de Otimizar nota, uma só branch", () => {
+  it("a segunda ação entra na MESMA branch, sem nova branch, mantendo a nota de partida da origem", async () => {
+    const r = dirtyDocsRepo();
+    const origin = sha(r);
+    const first = await start(r, ["doc-hygiene"]);
+    expect(first.session).toMatchObject({ reused: false, rounds: 1 });
+    await seal(r);
+
+    const second = await start(r, ["doc-adr"]);
+    expect(second.branch).toBe(first.branch);
+    expect(second.session).toMatchObject({ reused: true, added_actions: ["doc-adr"], rounds: 2 });
+    expect(second.actions).toEqual(["doc-hygiene", "doc-adr"]);
+    expect(second.baseline).toEqual(first.baseline); // a referência segue sendo a origem
+    expect(second.after).toBeUndefined(); // precisa de novo seal
+    expect(r.git("branch", "--list", "docs/repo-score-*").trim().split("\n")).toHaveLength(1);
+    expect(branchOf(r)).toBe(first.branch);
+    expect(sha(r, "main")).toBe(origin);
+
+    const sealed = await seal(r);
+    expect(sealed.state.after!.criteria["D8"]).toBe(2);
+    expect(sealed.state.after!.criteria["D3"]).toBeGreaterThan(sealed.state.baseline.criteria["D3"] ?? -1);
+    expect(sealed.state.commits.length).toBeGreaterThanOrEqual(2);
+    expect(sha(r, "main")).toBe(origin);
+    finishFix({ root: r.root, decision: "keep" });
+  });
+
+  it("funciona também se o usuário voltou para a origem entre os cliques, e commita o trabalho guiado pendente", async () => {
+    const r = dirtyDocsRepo();
+    const first = await start(r, ["doc-hygiene"]);
+    r.write("docs/extra.md", "# Extra\n\nTrabalho guiado da rodada anterior, ainda sem commit.\n");
+    r.git("switch", "main"); // working tree limpa? o arquivo novo viajou para main como não rastreado
+    r.git("switch", first.branch);
+    const second = await start(r, ["doc-adr"]);
+    expect(second.branch).toBe(first.branch);
+    expect(r.git("status", "--porcelain").trim()).toBe(""); // o pendente foi commitado antes da nova ação
+    expect(r.git("log", "--format=%s", "-5")).toContain("ajustes");
+    finishFix({ root: r.root, decision: "keep" });
+
+    const other = dirtyDocsRepo();
+    const s1 = await start(other, ["doc-hygiene"]);
+    other.git("switch", "main");
+    const s2 = await start(other, ["doc-adr"]);
+    expect(s2.branch).toBe(s1.branch);
+    expect(branchOf(other)).toBe(s1.branch);
+  });
+
+  it("ação sem o que alterar não cria rodada nem branch; status anterior é preservado", async () => {
+    const r = dirtyDocsRepo();
+    const first = await start(r, ["doc-hygiene"]);
+    await seal(r);
+    const again = await start(r, ["doc-hygiene"]); // resíduos já removidos na branch
+    expect(again.branch).toBe(first.branch);
+    expect(again.session!.added_actions).toEqual([]);
+    expect(again.session!.rounds).toBe(1);
+    expect(again.status).toBe("sealed");
+    expect(again.after).toBeDefined();
+  });
+
+  it("depois do finish a próxima correção abre uma sessão nova; commit bloqueado exige resume", async () => {
+    const r = dirtyDocsRepo();
+    const first = await start(r, ["doc-hygiene"]);
+    await seal(r);
+    finishFix({ root: r.root, decision: "keep" });
+    const next = await start(r, ["doc-adr"], { branchName: "docs/outra-sessao" });
+    expect(next.branch).toBe("docs/outra-sessao");
+    expect(next.branch).not.toBe(first.branch);
+    expect(next.session!.reused).toBe(false);
+    finishFix({ root: r.root, decision: "discard", confirm: true });
+
+    const blocked = dirtyDocsRepo();
+    mkdirSync(path.join(blocked.root, ".githooks"), { recursive: true });
+    writeFileSync(path.join(blocked.root, ".githooks/pre-commit"), "#!/bin/sh\necho bloqueado >&2\nexit 1\n");
+    chmodSync(path.join(blocked.root, ".githooks/pre-commit"), 0o755);
+    blocked.git("add", "-A");
+    blocked.git("-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", "chore: hook");
+    blocked.git("config", "core.hooksPath", ".githooks");
+    const b1 = await start(blocked, ["doc-hygiene"]);
+    expect(b1.status).toBe("commit_blocked");
+    await expect(start(blocked, ["doc-adr"])).rejects.toThrow(/commit bloqueado/);
+  });
+});

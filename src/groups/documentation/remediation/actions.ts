@@ -1,6 +1,10 @@
 import type { Action } from "../../../remediation/types.js";
 import { ruleGlobs, ruleUniverse } from "../collectors/d7-specs-rules.js";
+import { buildSpecPlanCached } from "../sdd/discovery/plan.js";
+import { lintSpecs } from "../sdd/discovery/lint.js";
+import { readManifest } from "../shared/manifest.js";
 import { estimateDiscoveryTokens, estimateGapTokens } from "../sdd/estimate.js";
+import { estimateAdoption, estimateMigration } from "../sdd/tasks.js";
 import { parseGlobs, planSdd } from "../sdd/scaffold.js";
 import { planAdr } from "./adr.js";
 import { planBrokenRefs } from "./broken-refs.js";
@@ -8,6 +12,11 @@ import { planHygiene } from "./hygiene.js";
 import { planIndex } from "./index-docs.js";
 import { planOwners } from "./owners.js";
 import { planReadme } from "./readme.js";
+
+const readManifestSpecsDir = (ctx: Parameters<typeof readManifest>[0], params: Record<string, string>): string => {
+  const m = readManifest(ctx);
+  return m.state === "ok" ? m.manifest.specsDir : (params["specs_dir"] || "docs/specs").replace(/\/+$/, "");
+};
 
 const git = { tool: "git", why: "as alterações vão para uma branch nova", blocking: true } as const;
 
@@ -33,14 +42,24 @@ export const DOCUMENTATION_ACTIONS: Action[] = [
       { key: "skill_slug", label: "Nome da skill do domínio", help: "Ex.: sdd-pagamentos (padrão: sdd-<nome do repo>)." },
       { key: "rule_globs", label: "Globs do código de regra de negócio", help: "Separados por vírgula, ex.: src/Domain/Rules/*. O gate vigia esses arquivos." },
       { key: "project_name", label: "Nome do projeto", help: "Padrão: nome da pasta do repo." },
+      { key: "max_specs", label: "Máximo de specs nesta rodada", default: "60", help: "Limita o plano (e o custo); as de menor densidade de regra ficam adiadas." },
+      { key: "migrate", label: "Migrar specs legadas ao padrão", default: "auto", help: "none ignora as specs existentes fora do padrão." },
     ],
     plan: (ctx, params) => planSdd(ctx, params),
     estimateTokens(ctx, params) {
       const plan = planSdd(ctx, params);
       if (!plan?.guided.length) return null;
+      const ids = plan.guided.map((g) => g.id);
+      const parts: { low: number; high: number; basis: string }[] = [];
+      if (ids.some((i) => i.startsWith("sdd-specs:"))) {
+        const maxSpecs = Number(params["max_specs"]) > 0 ? Number(params["max_specs"]) : undefined;
+        parts.push(estimateAdoption(buildSpecPlanCached(ctx, { specsDir: (params["specs_dir"] || "docs/specs").replace(/\/+$/, ""), ...(maxSpecs ? { maxSpecs } : {}) })));
+      }
+      if (ids.some((i) => i.startsWith("sdd-migrate:"))) parts.push(estimateMigration(ctx, lintSpecs(ctx, readManifestSpecsDir(ctx, params))));
       const u = ruleUniverse(ctx);
-      if (plan.guided.some((g) => g.id === "sdd-gap-specs") && u) return estimateGapTokens(ctx, [...new Set([...u.declaredUncited, ...u.siblingsUncited])]);
-      return estimateDiscoveryTokens(ctx, [...parseGlobs(params["rule_globs"]), ...ruleGlobs(ctx).globs]);
+      if (ids.includes("sdd-gap-specs") && u) parts.push(estimateGapTokens(ctx, [...new Set([...u.declaredUncited, ...u.siblingsUncited])]));
+      if (parts.length === 0) return estimateDiscoveryTokens(ctx, [...parseGlobs(params["rule_globs"]), ...ruleGlobs(ctx).globs]);
+      return { low: parts.reduce((n, p) => n + p.low, 0), high: parts.reduce((n, p) => n + p.high, 0), basis: parts.map((p) => p.basis).join(" + ") };
     },
   },
   {

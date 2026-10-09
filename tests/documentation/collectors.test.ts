@@ -320,11 +320,16 @@ describe("calibração contra repos reais", () => {
 
 
 describe("D7 · universo de regras (perímetro do manifest × specs × irmãos)", () => {
+  const bigRule = (name: string) =>
+    `class ${name} {\n${Array.from({ length: 30 }, (_, i) => `  int M${i}(int v) { if (v > ${i + 3}) { return v * ${i + 5}; } else if (v < ${i + 2}) { return ${i + 7}; } return v; }`).join("\n")}\n}\n`;
+
   const manifest = (globs: string[]) => JSON.stringify({ version: 1, projectName: "p", specsDir: "docs/specs", skillSlug: "sdd-p", skillPath: ".claude/skills/sdd-p/SKILL.md", ruleCodeGlobs: globs });
   function repoWithGap() {
     const r = makeRepo();
     r.write(".sdd/manifest.json", manifest(["src/Rules/*"]));
-    for (const f of ["src/Rules/A.cs", "src/Rules/B.cs", "src/Handlers/H1.cs", "src/Handlers/H2.cs", "src/Handlers/H3.cs"]) r.write(f, "class X { }");
+    for (const f of ["src/Rules/A.cs", "src/Rules/B.cs", "src/Handlers/H1.cs", "src/Handlers/H2.cs"]) r.write(f, "class X { }");
+    r.write("src/Handlers/H3.cs", bigRule("H3")); // irmã com lógica de negócio de verdade
+    r.write("src/Handlers/Trivial.cs", "class Trivial { }"); // irmã trivial: não é regra
     r.write("src/Handlers/IHandler.cs", "interface IHandler { }"); // interface: não é regra
     r.write("src/Dtos/Dto.cs", "class Dto { }"); // dados: não é regra
     r.write("docs/specs/README.md", "# S\n[1](01.md)");
@@ -342,6 +347,7 @@ describe("D7 · universo de regras (perímetro do manifest × specs × irmãos)"
     expect(notes.join("\n")).toContain("src/Rules/B.cs: no perímetro, mas nenhuma spec a cita");
     expect(notes.join("\n")).toContain("src/Handlers/H3.cs: irmã das regras conhecidas");
     expect(notes.join("\n")).not.toContain("IHandler");
+    expect(notes.join("\n")).not.toContain("Trivial");
     expect(notes.join("\n")).not.toContain("Dto.cs");
     expect(notes[0]).toContain("universo de 5 arquivos");
   });
