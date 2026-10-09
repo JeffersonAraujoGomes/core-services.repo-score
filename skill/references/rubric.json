@@ -1,7 +1,16 @@
 {
- "version": "2.3.0",
+ "version": "2.3.1",
  "status": "draft",
- "source": "Platform Repository Maturity Score — Draft v2.3 (08/out/2026)",
+ "source": "Platform Repository Maturity Score — Draft v2.3 (08/out/2026), com 1 ajuste local (ver local_adjustments)",
+ "local_adjustments": [
+  {
+   "id": "D7",
+   "field": "weight",
+   "from": 1,
+   "to": 4,
+   "reason": "D7 é o único critério que mede se as regras de negócio têm spec (SDD). Com peso 1 de 12 em Documentação, um repo sem nenhuma spec ainda chegava a A. Com peso 4 ele passa a ser o critério mais pesado da dimensão (D1 pesa 3) e a ausência de SDD pesa de verdade. Desvio local da rubrica oficial v2.3: não compare esta nota com a oficial."
+  }
+ ],
  "calculation": {
   "grades": [
    {
@@ -1061,7 +1070,7 @@
       "2": 90,
       "1": 60
      },
-     "weight": 1,
+     "weight": 4,
      "sources": [
       "repo"
      ],

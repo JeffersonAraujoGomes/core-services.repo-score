@@ -68,6 +68,8 @@ export const RubricSchema = z
     version: z.string().regex(/^\d+\.\d+\.\d+$/),
     status: z.string().optional(),
     source: z.string().optional(),
+    /** Desvios locais em relação à rubrica oficial (informativo: o cálculo já usa os valores ajustados). */
+    local_adjustments: z.array(z.object({ id: z.string(), field: z.string(), from: z.number(), to: z.number(), reason: z.string() })).optional(),
     calculation: z.object({
       grades: z
         .array(

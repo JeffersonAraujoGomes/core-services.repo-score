@@ -239,7 +239,7 @@ describe("agregação e nota (4.1 e 4.3)", () => {
     const r = score(rubric, input);
     expect(r.zero_criteria.sort()).toEqual(["A10", "A8", "A9", "D9"]);
     expect(r.dimensions.architecture!.max).toBe(2 * 25); // denominador cheio
-    expect(r.dimensions.documentation!.max).toBe(2 * 13);
+    expect(r.dimensions.documentation!.max).toBe(2 * 16); // 13 da rubrica oficial + 3 do ajuste local do D7 (peso 4)
     const d9 = r.dimensions.documentation!.criteria.find((c) => c.id === "D9")!;
     expect(d9).toMatchObject({ state: "scored", points: 0, zeroed_by: "A8" });
   });

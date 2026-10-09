@@ -117,13 +117,34 @@ export function suggestPerimeterGlobs(ctx: Ctx, u: RuleUniverse, limit = 12): st
   return minimal.sort().slice(0, limit).map((d) => `${d}/*`);
 }
 
+/** Arquivos de regra de negócio que o repo tem sem nenhum SDD para vigiá-los: abaixo disso, o D7 não se aplica. */
+export const MIN_RULES_WITHOUT_SDD = 3;
+
+/**
+ * Sem manifest nem globs de regra, o SDD não existe. Se o repo tem regra de negócio, a ausência de spec É a medição
+ * (0% ligadas), e não um critério "não medido" que sai do cálculo e deixa o repo sem SDD chegar a A.
+ */
+function withoutSdd(ctx: Ctx) {
+  const excluded = ctx.policy.docs.rule_exclude_globs.map(pathspecToRegex);
+  const found = ctx.files.filter((f) => isRuleCandidate(f) && !excluded.some((re) => re.test(f))).filter((f) => {
+    const text = ctx.readText(f);
+    return text !== null && classifyRuleFile(f, text).rule;
+  });
+  if (found.length < MIN_RULES_WITHOUT_SDD) {
+    return unmeasured("D7", `sem SDD (.sdd/manifest.json) nem docs.rule_globs, e só ${found.length} arquivo(s) de regra de negócio identificado(s) (mínimo ${MIN_RULES_WITHOUT_SDD} para cobrar specs)`);
+  }
+  const evidence: Evidence[] = [
+    jobEvidence("d7-specs-rules", `SDD ausente: ${found.length} arquivos de regra de negócio identificados e nenhum está no perímetro de um SDD nem é vigiado por spec`),
+    ...found.slice(0, 20).map((f) => ({ kind: "file" as const, path: f, line: 1, note: "regra de negócio sem spec (SDD ausente)" })),
+  ];
+  return measured("D7", 0, capEvidence(evidence), "medium");
+}
+
 export const d7SpecsRules: Collector = {
   ids: ["D7"],
   async run(ctx) {
     const u = ruleUniverse(ctx);
-    if (!u) {
-      return [unmeasured("D7", "sem globs de regra de negócio: informe docs.rule_globs na política ou adote o SDD (.sdd/manifest.json → ruleCodeGlobs)")];
-    }
+    if (!u) return [withoutSdd(ctx)];
     if (u.globs.length > 0 && u.declared.length === 0 && u.cited.size === 0) {
       return [unmeasured("D7", `os globs de regra (${u.source}) não casam nenhum arquivo de código`)];
     }

@@ -112,7 +112,7 @@ describe("fluxo completo: planejar → guardrails → specs no padrão → nota 
 
     const sealed = await sealFix({ root: r.root, rubricPath: RUBRIC_PATH, skipHooks: true });
     expect(sealed.state.after!.criteria["D7"]).toBe(2);
-    expect(sealed.state.baseline.criteria["D7"]).toBeNull(); // sem manifest, não media
+    expect(sealed.state.baseline.criteria["D7"]).toBe(0); // sem SDD, a ausência de spec é a medição (antes: "não medido" e fora do cálculo)
     const lint = sealed.data.panels.flatMap((p) => p.items).find((i) => i.label === "Padrão das specs")!;
     expect(lint.status).toBe("ok");
     expect(lint.detail).toContain(`${plan.specs.length} de ${plan.specs.length} conformes`);

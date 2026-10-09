@@ -21125,13 +21125,27 @@ function suggestPerimeterGlobs(ctx, u, limit = 12) {
   const minimal = dirs.filter((d) => !dirs.some((o) => o !== d && d.startsWith(o + "/")));
   return minimal.sort().slice(0, limit).map((d) => `${d}/*`);
 }
+var MIN_RULES_WITHOUT_SDD = 3;
+function withoutSdd(ctx) {
+  const excluded = ctx.policy.docs.rule_exclude_globs.map(pathspecToRegex);
+  const found = ctx.files.filter((f) => isRuleCandidate(f) && !excluded.some((re) => re.test(f))).filter((f) => {
+    const text = ctx.readText(f);
+    return text !== null && classifyRuleFile(f, text).rule;
+  });
+  if (found.length < MIN_RULES_WITHOUT_SDD) {
+    return unmeasured("D7", `sem SDD (.sdd/manifest.json) nem docs.rule_globs, e s\xF3 ${found.length} arquivo(s) de regra de neg\xF3cio identificado(s) (m\xEDnimo ${MIN_RULES_WITHOUT_SDD} para cobrar specs)`);
+  }
+  const evidence = [
+    jobEvidence("d7-specs-rules", `SDD ausente: ${found.length} arquivos de regra de neg\xF3cio identificados e nenhum est\xE1 no per\xEDmetro de um SDD nem \xE9 vigiado por spec`),
+    ...found.slice(0, 20).map((f) => ({ kind: "file", path: f, line: 1, note: "regra de neg\xF3cio sem spec (SDD ausente)" }))
+  ];
+  return measured("D7", 0, capEvidence(evidence), "medium");
+}
 var d7SpecsRules = {
   ids: ["D7"],
   async run(ctx) {
     const u = ruleUniverse(ctx);
-    if (!u) {
-      return [unmeasured("D7", "sem globs de regra de neg\xF3cio: informe docs.rule_globs na pol\xEDtica ou adote o SDD (.sdd/manifest.json \u2192 ruleCodeGlobs)")];
-    }
+    if (!u) return [withoutSdd(ctx)];
     if (u.globs.length > 0 && u.declared.length === 0 && u.cited.size === 0) {
       return [unmeasured("D7", `os globs de regra (${u.source}) n\xE3o casam nenhum arquivo de c\xF3digo`)];
     }
@@ -22931,6 +22945,8 @@ var RubricSchema = external_exports.object({
   version: external_exports.string().regex(/^\d+\.\d+\.\d+$/),
   status: external_exports.string().optional(),
   source: external_exports.string().optional(),
+  /** Desvios locais em relação à rubrica oficial (informativo: o cálculo já usa os valores ajustados). */
+  local_adjustments: external_exports.array(external_exports.object({ id: external_exports.string(), field: external_exports.string(), from: external_exports.number(), to: external_exports.number(), reason: external_exports.string() })).optional(),
   calculation: external_exports.object({
     grades: external_exports.array(
       external_exports.object({

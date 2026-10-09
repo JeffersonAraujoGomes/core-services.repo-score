@@ -72,6 +72,8 @@ node $CLI fix seal <repo>                                                      #
 node $CLI fix finish <repo> --decision keep|merge|discard [--confirm]
 ```
 
+**Escala (ajuste local):** a rubrica é a v2.3 com um ajuste, registrado em `skill/references/rubric.json` (`local_adjustments`, versão 2.3.1): o D7 pesa 4 em vez de 1. Motivo: com peso 1 de 12, um repo sem nenhuma spec ainda chegava a A. Além disso, sem SDD num repo com regra de negócio (3 ou mais arquivos de regra identificados), o D7 é medido como 0% e não excluído do cálculo. Desvio local: a nota não é comparável com a oficial.
+
 **D7 (specs ↔ regras)** mede um universo, não só o que o manifest declara: arquivos no perímetro (`ruleCodeGlobs`) + código que as specs citam como regra + arquivos de comportamento nas mesmas pastas (heurística, sem DTOs, modelos, comandos e interfaces). Uma regra só está ligada se está **no perímetro e citada por uma spec**; citada fora do perímetro, no perímetro sem spec ou irmã sem nenhum dos dois contam como lacuna. Arquivos revisados que não são regra saem do universo em `docs.rule_exclude_globs`. A ação `sdd-adopt` também **completa um SDD já adotado**: amplia o perímetro com as pastas que as specs já citam (revisável, ou `--param rule_globs=a,b` / `perimeter=none`) e devolve uma tarefa guiada para documentar as regras sem spec.
 
 Ações: `sdd-adopt`, `doc-hygiene`, `doc-adr`, `doc-owners`, `doc-refs`, `doc-readme` (guiada) e `doc-index`. Os templates dos hooks vêm do `core-services.sdd-gate-ia` por `npm run sync-sdd-templates` (um teste detecta edição manual). Detalhes e critérios D1–D9: [docs/plano-documentacao-sdd.md](docs/plano-documentacao-sdd.md).

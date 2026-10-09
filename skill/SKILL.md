@@ -63,6 +63,10 @@ A rubrica é a mesma para todos; o que varia fica em `repo-score.policy.json` na
 
 `profile` declara critérios **não aplicáveis**; o que não for declarado conta como aplicável. `secret_allowlist` exige justificativa.
 
+## Escala: ajuste local da rubrica
+
+A rubrica embutida é a v2.3 com **1 ajuste local** (`local_adjustments` em `references/rubric.json`, versão 2.3.1): o **D7** (specs ↔ regras, o SDD) pesa 4 em vez de 1, o maior peso da dimensão Documentação. Sem SDD num repo que tem regra de negócio, o D7 é medido como 0% (e não ignorado), então o repo não chega a A sem specs. Diga isso se o usuário comparar a nota com a oficial: não são comparáveis.
+
 ## O que esta versão mede
 
 S1 segredos em config/IaC, S2 segredos no histórico git, S9 imagem base fixada, S12 lockfile, S13 actions por SHA, C12 arquivos grandes, P4 commits convencionais, P5 versionamento central, P6 CODEOWNERS, D3 ADRs vivos. Os demais critérios aparecem como "aguardando coletor" e ficam fora do cálculo.

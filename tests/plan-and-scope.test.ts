@@ -126,7 +126,7 @@ describe("plan", () => {
     });
     expect(p.selection.criteria).toBe(71);
     expect(p.selection.measurable).toBe(17);
-    expect(p.selection.max_weight_coverage).toBeCloseTo(23 / 135, 3);
+    expect(p.selection.max_weight_coverage).toBeCloseTo(26 / 138, 3);
     expect(p.selection.grade_will_be_capped_at_e).toBe(true);
     expect(p.repo).toMatchObject({ is_git: true, branch: "main", dirty: false });
     expect(p.tools.find((t) => t.name === "node")).toMatchObject({ required: true, found: true });

@@ -227,7 +227,22 @@ describe("D7 · specs ligadas às regras", () => {
     expect(valueOf(await run1(d7SpecsRules, r.ctx({ docs: { rule_globs: ["src/Rules/*"] } as never })))).toBe(100);
   });
 
-  it("sem globs, ou globs que não casam nada, não mede (não é N/A silencioso)", async () => {
+  it("sem SDD e com regra de negócio no repo, a ausência de spec é a medição: 0%, não 'não medido'", async () => {
+    const rule = (n: string) => `public class ${n}\n{\n${Array.from({ length: 30 }, (_, i) => `    public int M${n}${i}(int v) { if (v > ${i + 3}) { return v * ${i + 5}; } else if (v < ${i + 2}) { return ${i + 7}; } return v; }`).join("\n")}\n}\n`;
+    const r = makeRepo();
+    r.write("README.md", "# Projeto\nDescrição suficiente para não ser um documento vazio.");
+    for (const n of ["LossRule", "ArrearRule", "DiscountRule"]) r.write(`src/Domain/Rules/${n}.cs`, rule(n));
+    const res = await run1(d7SpecsRules, r.ctx());
+    expect(res.status).toBe("measured");
+    expect(valueOf(res)).toBe(0);
+    expect(JSON.stringify(res)).toContain("SDD ausente");
+    // com menos de 3 regras o critério não se aplica de fato
+    const poucas = makeRepo();
+    poucas.write("src/Domain/Rules/LossRule.cs", rule("LossRule"));
+    expect((await run1(d7SpecsRules, poucas.ctx())).status).toBe("unmeasured");
+  });
+
+  it("sem regra de negócio no repo, ou com globs que não casam nada, não mede (não é N/A silencioso)", async () => {
     const r = makeRepo();
     r.write("docs/a.md", "# a");
     expect((await run1(d7SpecsRules, r.ctx())).status).toBe("unmeasured");
