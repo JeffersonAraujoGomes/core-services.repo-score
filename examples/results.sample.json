@@ -1,0 +1,787 @@
+{
+ "repo": "meu-repo",
+ "profile": {
+  "rules_engine": false,
+  "has_database": true,
+  "exposes_api": true,
+  "east_west_standard_defined": false
+ },
+ "results": [
+  {
+   "id": "S1",
+   "status": "measured",
+   "value": 1,
+   "evidence": [
+    {
+     "kind": "file",
+     "path": "README.md",
+     "line": 1
+    }
+   ]
+  },
+  {
+   "id": "S2",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S3",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S4",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S5",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S6",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S7",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S8",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S9",
+   "status": "measured",
+   "value": 3,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S10",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S11",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S12",
+   "status": "measured",
+   "value": "locked",
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "S13",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T1",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T2",
+   "status": "measured",
+   "value": 65,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T3",
+   "status": "measured",
+   "value": 5,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T4",
+   "status": "measured",
+   "value": 80,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T5",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T6",
+   "status": "measured",
+   "value": "build+test",
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T7",
+   "status": "measured",
+   "value": 95,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T8",
+   "status": "measured",
+   "value": 80,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "T9",
+   "status": "measured",
+   "value": 1,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C1",
+   "status": "measured",
+   "value": 2,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C2",
+   "status": "measured",
+   "value": 2,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C3",
+   "status": "measured",
+   "value": 3,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C4",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C5",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C6",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C7",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C8",
+   "status": "measured",
+   "value": "gating",
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C9",
+   "status": "measured",
+   "value": 90,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C10",
+   "status": "measured",
+   "value": 3,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C11",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "C12",
+   "status": "measured",
+   "value": 1,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A1",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A2",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A3",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A4",
+   "status": "measured",
+   "value": 1,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A5",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A6",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A7",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A8",
+   "status": "measured",
+   "value": "c1+c2",
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A9",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A10",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A11",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "A12",
+   "status": "measured",
+   "value": "configured+required",
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O1",
+   "status": "unmeasured",
+   "reason": "sem acesso ao Datadog"
+  },
+  {
+   "id": "O2",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O3",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O4",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O5",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O6",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O7",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O8",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O9",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "O10",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D1",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D2",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "status": "measured",
+   "value": "recent",
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D4",
+   "status": "measured",
+   "value": 98,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D5",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "status": "measured",
+   "value": 90,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D7",
+   "status": "measured",
+   "value": 90,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D8",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "D9",
+   "status": "measured",
+   "value": 90,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "P1",
+   "status": "measured",
+   "value": "owners",
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "P2",
+   "status": "measured",
+   "value": 100,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "P3",
+   "status": "measured",
+   "value": 0,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "P4",
+   "status": "measured",
+   "value": 90,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "P5",
+   "status": "measured",
+   "value": "present+no-divergence",
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  },
+  {
+   "id": "P6",
+   "status": "measured",
+   "value": 3,
+   "evidence": [
+    {
+     "kind": "job",
+     "name": "exemplo"
+    }
+   ]
+  }
+ ]
+}

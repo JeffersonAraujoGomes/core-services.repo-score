@@ -1,0 +1,4 @@
+{
+  "enabled": ["documentation"],
+  "note": "Grupos (dimensões da rubrica) ativados por padrão. Só os ativados podem ser escolhidos na skill. Para ativar outros sem editar este arquivo: `repo-score groups set documentation,security` (grava em ~/.repo-score/config.json) ou a variável REPO_SCORE_ENABLED_GROUPS (aceita `all`)."
+}

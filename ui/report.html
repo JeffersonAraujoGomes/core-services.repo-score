@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repo Score</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,.10);
+  --series: #2a78d6; --series-soft: #cde2fb;
+  --good: #0ca30c; --good-ink: #006300; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --on-fill: #0b0b0b; --on-critical: #ffffff;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10);
+    --series: #3987e5; --series-soft: #184f95; --good-ink: #0ca30c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10);
+  --series: #3987e5; --series-soft: #184f95; --good-ink: #0ca30c;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }
+h1, h2, h3, p { margin: 0; }
+h2 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 36px 0 12px; }
+.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 20px; }
+.muted { color: var(--muted); } .sec { color: var(--ink-2); }
+.mono { font-family: var(--mono); font-size: 13px; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+button:focus-visible { outline: 2px solid var(--series); outline-offset: 2px; border-radius: 6px; }
+
+header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+header h1 { font-size: 22px; font-weight: 650; }
+header .meta { color: var(--ink-2); font-size: 13px; margin-top: 4px; display: flex; gap: 6px 14px; flex-wrap: wrap; }
+.tag { border: 1px solid var(--ring); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--ink-2); }
+.theme { border: 1px solid var(--ring); border-radius: 8px; padding: 6px 12px; font-size: 13px; color: var(--ink-2); background: var(--surface); }
+
+.hero { display: grid; grid-template-columns: auto 1fr minmax(240px, 320px); gap: 28px; align-items: center; margin-top: 20px; }
+.grade { width: 108px; height: 108px; border-radius: 22px; display: grid; place-items: center; font-size: 64px; font-weight: 700; line-height: 1; }
+.grade.good { background: var(--good); color: #fff; } .grade.warning { background: var(--warning); color: var(--on-fill); }
+.grade.serious { background: var(--serious); color: var(--on-fill); } .grade.critical { background: var(--critical); color: var(--on-critical); }
+.grade.none { background: var(--grid); color: var(--muted); }
+.total { font-size: 40px; font-weight: 650; letter-spacing: -.02em; }
+.total small { font-size: 18px; font-weight: 500; color: var(--muted); }
+.verdict { margin-top: 2px; font-size: 14px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; }
+.delta { margin-top: 8px; font-size: 14px; }
+.delta.up { color: var(--good-ink); } .delta.down { color: var(--critical); }
+.meter { height: 10px; background: var(--grid); border-radius: 5px; overflow: hidden; margin: 8px 0 6px; }
+.meter > span { display: block; height: 100%; background: var(--series); border-radius: 5px; }
+.cov-title { font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px; }
+
+.banner { display: flex; gap: 12px; align-items: flex-start; border-radius: 10px; padding: 12px 14px; margin-top: 14px; font-size: 14px; border: 1px solid var(--ring); background: var(--surface); }
+.banner .ic { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.banner.warn .ic { background: var(--warning); color: var(--on-fill); }
+.banner.danger { border-color: var(--critical); } .banner.danger .ic { background: var(--critical); color: #fff; }
+.banner strong { font-weight: 650; }
+
+.dim { border-top: 1px solid var(--grid); }
+.dim:first-child { border-top: 0; }
+.dim-head { display: grid; grid-template-columns: minmax(150px, 230px) 1fr 150px 18px; gap: 16px; align-items: center; width: 100%; padding: 12px 0; }
+.dim-name { font-weight: 600; } .dim-name small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.bar { position: relative; height: 12px; background: var(--grid); border-radius: 6px; }
+.bar > span { position: absolute; inset: 0 auto 0 0; background: var(--series); border-radius: 0 6px 6px 0; min-width: 2px; }
+.bar > b { position: absolute; right: 0; top: -22px; font-size: 13px; font-weight: 600; }
+.bar.empty { background: transparent; border: 1px dashed var(--axis); }
+.dim-count { font-size: 13px; color: var(--ink-2); text-align: right; }
+.chev { color: var(--muted); transition: transform .15s; } .dim.open .chev { transform: rotate(90deg); }
+.dim-body { display: none; padding: 4px 0 16px; } .dim.open .dim-body { display: block; }
+
+.seg { display: inline-flex; border: 1px solid var(--ring); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { padding: 6px 12px; font-size: 13px; color: var(--ink-2); border-right: 1px solid var(--ring); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--series); color: #fff; }
+
+.crit { border-top: 1px solid var(--grid); }
+.crit-row { display: grid; grid-template-columns: 44px 1fr 150px 92px 26px; gap: 12px; align-items: center; width: 100%; padding: 9px 0; }
+.cid { font-family: var(--mono); font-size: 12px; background: var(--grid); border-radius: 5px; padding: 2px 6px; text-align: center; }
+.ctitle small { display: block; color: var(--muted); font-size: 12px; }
+.cval { font-size: 13px; color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
+.pill { display: inline-flex; gap: 5px; align-items: center; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; font-weight: 600; white-space: nowrap; justify-content: center; }
+.pill.p2 { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good-ink); }
+.pill.p1 { background: color-mix(in srgb, var(--warning) 28%, transparent); color: var(--ink); }
+.pill.p0 { background: color-mix(in srgb, var(--critical) 18%, transparent); color: var(--critical); }
+.pill.pn { background: var(--grid); color: var(--muted); }
+.gate { font-size: 11px; border: 1px solid var(--critical); color: var(--critical); border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
+.crit.is-unmeasured .ctitle, .crit.is-na .ctitle { color: var(--muted); }
+.evid { display: none; padding: 2px 0 12px 56px; }
+.crit.open .evid { display: block; }
+.evid ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.evid li { font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.evid .where { font-family: var(--mono); font-size: 12.5px; color: var(--ink); background: none; border-bottom: 1px dotted var(--axis); cursor: copy; }
+.evid .why { color: var(--muted); }
+.thr { font-size: 12.5px; color: var(--muted); margin: 0 0 8px 56px; }
+.low { font-size: 11px; border: 1px solid var(--warning); border-radius: 4px; padding: 0 5px; color: var(--ink-2); }
+
+.opp { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--grid); }
+.opp:first-child { border-top: 0; }
+.gain { font-weight: 650; color: var(--good-ink); font-variant-numeric: tabular-nums; }
+.arrow { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+
+details { border-top: 1px solid var(--grid); padding: 10px 0; } details:first-child { border-top: 0; }
+summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.reasons { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }
+footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; justify-items: start; }
+  .dim-head { grid-template-columns: 1fr 18px; } .dim-head .bar-wrap, .dim-head .dim-count { grid-column: 1 / -1; text-align: left; }
+  .dim-head .bar-wrap { margin-top: 18px; }
+  .crit-row { grid-template-columns: 44px 1fr 26px; } .crit-row .cval, .crit-row .pill { grid-column: 2; justify-self: start; }
+  .evid, .thr { padding-left: 0; margin-left: 0; }
+  .opp { grid-template-columns: 44px 1fr; } .opp .gain, .opp .arrow { grid-column: 2; }
+}
+
+.fix { border-top: 1px solid var(--grid); padding: 14px 0; }
+.fix:first-child { border-top: 0; padding-top: 0; }
+.fix-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.fix-head b { font-weight: 650; }
+.chip { font-size: 12px; border: 1px solid var(--ring); border-radius: 999px; padding: 1px 9px; color: var(--ink-2); white-space: nowrap; }
+.chip.auto { border-color: var(--good); color: var(--good-ink); }
+.chip.guided, .chip.mixed { border-color: var(--warning); }
+.fix p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
+.fix .meta2 { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.fix .warn2 { color: var(--ink); }
+.panel-item { display: grid; grid-template-columns: 26px 200px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--grid); font-size: 14px; align-items: baseline; }
+.panel-item:first-of-type { border-top: 0; }
+.st { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.st.ok { background: var(--good); color: #fff; } .st.warn { background: var(--warning); color: var(--on-fill); }
+.st.fail { background: var(--critical); color: #fff; } .st.info { background: var(--grid); color: var(--ink-2); }
+.callout { font-size: 13px; color: var(--ink-2); margin-top: 12px; }
+.callout code, .mono-inline { font-family: var(--mono); font-size: 12.5px; background: var(--grid); border-radius: 4px; padding: 1px 5px; }
+@media (max-width: 760px) { .panel-item { grid-template-columns: 26px 1fr; } .panel-item span:last-child { grid-column: 2; color: var(--muted); } }
+
+.comp { margin-top: 14px; }
+.comp h3 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 8px; }
+.comp .scroll { overflow-x: auto; }
+.comp table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+.comp th, .comp td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--grid); vertical-align: top; }
+.comp th { font-size: 12px; font-weight: 600; color: var(--muted); border-top: 0; white-space: nowrap; }
+.comp td.num, .comp th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.comp tr.out td { color: var(--muted); }
+.comp tr.sum td { font-weight: 650; border-top: 2px solid var(--axis); }
+.comp .ids { display: flex; flex-wrap: wrap; gap: 3px 4px; }
+.comp .ids span { font-family: var(--mono); font-size: 11.5px; background: var(--grid); border-radius: 4px; padding: 0 5px; }
+.comp .ids span.none { background: transparent; color: var(--muted); font-family: inherit; padding: 0; }
+.part { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.part i { font-style: normal; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.part.yes i { background: var(--good); color: #fff; } .part.no i { background: var(--grid); color: var(--ink-2); }
+.comp .foot { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+@media print { .theme, .seg { display: none; } body { background: #fff; } }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script id="data" type="application/json">__REPORT_DATA__</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const R = D.result;
+  const DIMS = Object.values(R.dimensions);
+  const CRIT = D.criteria;
+  const NF = (d) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const trunc = (n, d = 1) => NF(d).format(Math.floor(n * 10 ** d + 1e-9) / 10 ** d); // nunca arredonda para cima
+  const STATE = { locked: "com lock e modo locked", present: "presente", absent: "ausente", none: "nenhum", "build+test": "build + testes", build: "só build",
+    gating: "bloqueante", "non-blocking": "sem bloquear", "c1+c2": "C1 + C2", partial: "parcial", recent: "atualizado ≤ 12 meses", owners: "com code owners",
+    approval: "≥ 1 aprovação", "present+no-divergence": "presente, sem divergência", "configured+required": "configurado e obrigatório", configured: "configurado" };
+
+  // criação de DOM: todo texto vem por textContent (nomes de arquivo e trechos do repo não são confiáveis)
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const k of kids.flat()) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(String(k)));
+    return el;
+  }
+  const gradeClass = (g) => (!g ? "none" : "SAB".includes(g) ? "good" : g === "C" ? "warning" : g === "D" ? "serious" : "critical");
+  const verdict = (g) => ("SAB".includes(g) ? "✓ No corte do KPI (nota ≥ B)" : "! Abaixo do corte do KPI (nota < B)");
+  const unitLabel = (u) => (u === "%" || u === "% apps" ? "%" : u === "/KLOC" ? "/KLOC" : u === "count" ? "" : u === "count regras" ? " regras" : "");
+
+  function fmtValue(c, v) {
+    if (v == null) return "—";
+    if (typeof v === "string") return STATE[v] || v;
+    const unit = unitLabel(CRIT[c.id].unit);
+    return NF(Number.isInteger(v) ? 0 : 2).format(v) + unit;
+  }
+  function thresholds(id) {
+    const c = CRIT[id], u = unitLabel(c.unit);
+    const f = (x) => (typeof x === "string" ? STATE[x] || x : NF(Number.isInteger(x) ? 0 : 2).format(x) + u);
+    if (c.direction === "boolean") return `2 pts: ${f(c.points["2"])} · 1 pt: ${f(c.points["1"])}`;
+    const sign = c.direction === "lower" ? "≤" : "≥";
+    return `2 pts: ${sign} ${f(c.points["2"])} · 1 pt: ${sign} ${f(c.points["1"])}`;
+  }
+  const pill = (o) => {
+    if (o.state === "scored") {
+      const icon = o.points === 2 ? "✓" : o.points === 1 ? "!" : "✕";
+      return h("span", { class: `pill p${o.points}`, title: `${o.points} de 2 pontos` }, icon, ` ${o.points}/2`);
+    }
+    return h("span", { class: "pill pn" }, o.state === "unmeasured" ? "não medido" : "N/A");
+  };
+
+  function evidenceItem(e) {
+    const copy = (t) => () => { try { navigator.clipboard.writeText(t); } catch (_) {} };
+    if (e.kind === "file") {
+      const loc = e.line ? `${e.path}:${e.line}` : e.path;
+      return h("li", {}, h("button", { class: "where", title: "copiar", onclick: copy(loc) }, loc), e.snippet && h("span", { class: "mono muted" }, e.snippet), e.note && h("span", { class: "why" }, e.note));
+    }
+    if (e.kind === "commit") return h("li", {}, h("button", { class: "where", onclick: copy(e.sha) }, `commit ${e.sha.slice(0, 8)}`), e.path && h("span", { class: "mono muted" }, e.path), e.note && h("span", { class: "why" }, e.note));
+    if (e.kind === "url") return h("li", {}, h("span", { class: "where" }, e.url), e.note && h("span", { class: "why" }, e.note));
+    return h("li", {}, h("span", { class: "where" }, `job ${e.name}`), e.note && h("span", { class: "why" }, e.note));
+  }
+
+  let filter = "scored";
+  const dimEls = [];
+
+  function critRow(o) {
+    const def = CRIT[o.id];
+    const detail = o.state === "scored" ? o.evidence : null;
+    const row = h("div", { class: `crit is-${o.state === "scored" ? "scored" : o.state === "unmeasured" ? "unmeasured" : "na"}`, "data-state": o.state, "data-points": o.state === "scored" ? o.points : "" });
+    const head = h("button", { class: "crit-row", "aria-expanded": "false", onclick: () => { const open = row.classList.toggle("open"); head.setAttribute("aria-expanded", open); } },
+      h("span", { class: "cid" }, o.id),
+      h("span", { class: "ctitle" }, def.title, def.blocking && h("span", { class: "gate", title: "critério bloqueante: com 0 ponto limita a nota a C" }, "gate"), o.state !== "scored" && h("small", {}, o.reason)),
+      h("span", { class: "cval" }, o.state === "scored" ? fmtValue(o, o.value) : ""),
+      pill(o),
+      h("span", { class: "chev" }, "›"));
+    row.append(head);
+    const body = h("div", { class: "evid" });
+    if (detail) {
+      body.append(h("p", { class: "thr", style: "margin-left:0" }, `${thresholds(o.id)} · peso ${def.weight}`, o.zeroed_by ? ` · zerado por ${o.zeroed_by}` : "", o.confidence === "low" ? " · " : "", o.confidence === "low" ? h("span", { class: "low" }, "confiança baixa") : null));
+      body.append(h("ul", {}, detail.map(evidenceItem)));
+    } else {
+      body.append(h("p", { class: "thr", style: "margin-left:0" }, `${thresholds(o.id)} · peso ${def.weight} · fonte: ${def.sources.join(", ")}`));
+    }
+    row.append(body);
+    return row;
+  }
+
+  function applyFilter() {
+    document.querySelectorAll(".crit").forEach((el) => {
+      const st = el.dataset.state, pts = el.dataset.points;
+      el.hidden = !(filter === "all" || (filter === "scored" && st === "scored") || (filter === "low" && st === "scored" && pts !== "2") || (filter === "unmeasured" && st !== "scored"));
+    });
+  }
+
+  function dimension(d) {
+    if (!D.meta.selected_groups.includes(d.id)) {
+      return h("div", { class: "dim" }, h("div", { class: "dim-head", style: "cursor:default" },
+        h("span", { class: "dim-name muted" }, d.title, h("small", {}, `peso ${d.weight}`)),
+        h("span", { class: "bar-wrap" }, h("div", { class: "bar empty", title: "fora do escopo" })),
+        h("span", { class: "dim-count" }, D.meta.enabled_groups.includes(d.id) ? "fora do escopo" : "desativado"), h("span", {})));
+    }
+    const el = h("div", { class: "dim" });
+    const scored = d.criteria.filter((c) => c.state === "scored").length;
+    const applicable = d.criteria.filter((c) => c.state !== "not_applicable").length;
+    const bar = d.score_pct == null
+      ? h("div", { class: "bar empty", title: "nenhum critério medido" })
+      : h("div", { class: "bar", role: "img", "aria-label": `${d.title}: ${trunc(d.score_pct)}%` }, h("span", { style: `width:${d.score_pct}%` }), h("b", { style: `left:min(calc(${d.score_pct}% - 20px), calc(100% - 44px));right:auto` }, trunc(d.score_pct) + "%"));
+    const head = h("button", { class: "dim-head", "aria-expanded": "false", onclick: () => { const open = el.classList.toggle("open"); head.setAttribute("aria-expanded", open); } },
+      h("span", { class: "dim-name" }, d.title, h("small", {}, `peso ${d.weight}`)),
+      h("span", { class: "bar-wrap" }, bar),
+      h("span", { class: "dim-count" }, d.score_pct == null ? "sem critério medido" : `${scored} de ${applicable} critérios medidos`),
+      h("span", { class: "chev" }, "›"));
+    el.append(head, h("div", { class: "dim-body" }, d.criteria.map(critRow)));
+    dimEls.push(el);
+    return el;
+  }
+
+  function hero() {
+    const cov = R.coverage;
+    const partial = cov.ratio < 1;
+    const prev = D.previous, cmp = D.comparison;
+    let delta = null;
+    if (cmp.status === "ok" || cmp.status === "regression") {
+      const d = cmp.delta;
+      delta = h("div", { class: `delta ${d > 0.05 ? "up" : d < -0.05 ? "down" : ""}` }, `${d > 0.05 ? "▲" : d < -0.05 ? "▼" : "="} ${d > 0 ? "+" : ""}${NF(1).format(d)} pts vs. análise anterior (${prev.grade || "—"}, ${prev.total == null ? "—" : trunc(prev.total)}${prev.commit ? ` · ${prev.commit}` : ""})`);
+    } else if (cmp.status === "rubric_changed" || cmp.status === "scope_changed") delta = h("div", { class: "delta" }, cmp.reason);
+    const F = D.final;
+    const pct = trunc(cov.weight_ratio * 100, 0);
+    const minPct = trunc(D.meta.min_coverage_for_grade * 100, 0);
+    const nodes = [h("div", { class: "card hero" },
+      h("div", { class: `grade ${gradeClass(F.grade)}`, role: "img", "aria-label": `Nota ${F.grade}` }, F.grade),
+      h("div", {}, h("div", { class: "total" }, R.total == null ? "—" : trunc(R.total), h("small", {}, F.reason ? " / 100 nos critérios medidos" : " / 100")),
+        h("div", { class: "verdict" }, verdict(F.grade), !F.reason && partial && h("span", { class: "tag" }, "provisória"), F.reason && h("span", { class: "tag" }, "cobertura insuficiente")), delta),
+      h("div", {}, h("div", { class: "cov-title" }, h("span", {}, "Critérios medidos"), h("b", {}, `${cov.measured} de ${cov.applicable}`)),
+        h("div", { class: "meter", role: "img", "aria-label": `${pct}% do peso medido` }, h("span", { style: `width:${cov.weight_ratio * 100}%` })),
+        h("div", { class: "muted", style: "font-size:13px" }, `${pct}% do peso do escopo avaliado (mínimo ${minPct}%)`)))];
+    if (R.blocked_by.length) nodes.push(h("div", { class: "banner danger", role: "alert" }, h("span", { class: "ic" }, "✕"), h("div", {}, h("strong", {}, "Gate acionado: "), R.blocked_by.map((id) => `${id} (${CRIT[id].title})`).join("; "), ". A nota fica limitada a C enquanto houver critério bloqueante em 0 ponto.")));
+    if (F.reason === "insufficient_coverage") nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota E por cobertura insuficiente. "), `Só ${pct}% do peso do escopo foi medido (mínimo ${minPct}%). Nos critérios medidos a pontuação é ${R.total == null ? "—" : trunc(R.total)}/100${F.computed_grade && F.computed_grade !== F.grade ? `, o que daria ${F.computed_grade}` : ""}. Sem medição suficiente não há evidência para uma nota maior; ela sobe conforme novos critérios passam a ser medidos.`)));
+    else if (F.reason === "nothing_measured") nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota E: nenhum critério foi medido. "), "Escolha outros grupos ou verifique os avisos da análise.")));
+    else if (partial) nodes.push(h("div", { class: "banner warn" }, h("span", { class: "ic" }, "!"), h("div", {}, h("strong", {}, "Nota provisória. "), `${pct}% do peso do escopo foi medido. Critérios não medidos ficam fora do cálculo, então a nota pode mudar quando forem medidos. Não é equivalente à nota oficial.`)));
+    if (D.meta.selected_groups.length < D.meta.groups.length) nodes.push(h("div", { class: "banner" }, h("span", { class: "ic", style: "background:var(--grid)" }, "i"), h("div", {}, h("strong", {}, "Escopo parcial. "), `Avaliados: ${D.meta.groups.filter((g) => D.meta.selected_groups.includes(g.id)).map((g) => g.title).join(", ")}. Os demais grupos ficam fora do cálculo, e o total considera só o peso dos grupos avaliados.`)));
+    if (D.meta.dirty) nodes.push(h("div", { class: "banner" }, h("span", { class: "ic", style: "background:var(--grid)" }, "i"), h("div", {}, "A análise considera a working tree, incluindo alterações ainda não commitadas.")));
+    return nodes;
+  }
+
+
+  /** Tabela do documento da rubrica (4.4): quais dimensões e critérios participaram da nota e como o total sai. */
+  function composition() {
+    const sel = D.meta.selected_groups;
+    let sumW = 0, sumWS = 0;
+    const rows = DIMS.map((d) => {
+      const scored = d.criteria.filter((c) => c.state === "scored");
+      const applicable = d.criteria.filter((c) => c.state !== "not_applicable").length;
+      const inScope = sel.includes(d.id);
+      const took = inScope && d.score_pct != null;
+      if (took) { sumW += d.weight; sumWS += d.weight * d.score_pct; }
+      const why = !D.meta.enabled_groups.includes(d.id) ? "grupo desativado" : !inScope ? "fora do escopo escolhido" : d.score_pct == null ? "nenhum critério medido" : "";
+      return h("tr", { class: took ? "" : "out" },
+        h("td", {}, d.title),
+        h("td", { class: "num" }, String(d.weight)),
+        h("td", {}, h("span", { class: `part ${took ? "yes" : "no"}` }, h("i", { "aria-hidden": "true" }, took ? "✓" : "–"), took ? "participou" : `não participou · ${why}`)),
+        h("td", {}, took
+          ? [h("div", { class: "muted", style: "font-size:12.5px;margin-bottom:3px" }, `${scored.length} de ${applicable} critérios`), h("div", { class: "ids" }, scored.map((c) => h("span", { title: CRIT[c.id].title }, c.id)))]
+          : h("div", { class: "ids" }, h("span", { class: "none" }, "—"))),
+        h("td", { class: "num" }, took ? trunc(d.score_pct) + "%" : "—"),
+        h("td", { class: "num" }, took ? NF(0).format(Math.floor(d.weight * d.score_pct)) : "—"));
+    });
+    const total = sumW > 0 ? sumWS / sumW : null;
+    rows.push(h("tr", { class: "sum" },
+      h("td", {}, "Total"),
+      h("td", { class: "num" }, String(sumW)),
+      h("td", {}, ""), h("td", {}, ""),
+      h("td", { class: "num" }, total == null ? "—" : trunc(total)),
+      h("td", { class: "num" }, NF(0).format(Math.floor(sumWS))) ));
+    const allW = DIMS.reduce((a, d) => a + d.weight, 0);
+    return h("div", { class: "card comp" }, h("h3", {}, "Composição da nota"),
+      h("div", { class: "scroll" }, h("table", {},
+        h("thead", {}, h("tr", {}, h("th", {}, "Dimensão"), h("th", { class: "num" }, "Peso"), h("th", {}, "Participou da medição?"), h("th", {}, "Critérios que entraram"), h("th", { class: "num" }, "Score"), h("th", { class: "num" }, "Peso × score"))),
+        h("tbody", {}, rows))),
+      h("p", { class: "foot" }, `Total = Σ(peso × score) ÷ Σ(pesos das dimensões que participaram) = ${NF(0).format(Math.floor(sumWS))} ÷ ${sumW}${total == null ? "" : ` = ${trunc(total)}`}. Dimensão sem critério medido ou fora do escopo sai do divisor (${sumW} de ${allW} pontos de peso); dentro de cada dimensão, só os critérios medidos contam.`));
+  }
+
+  function opportunities() {
+    const list = D.opportunities.slice(0, 8);
+    if (!list.length) return h("p", { class: "muted" }, "Nenhum critério medido está abaixo de 2 pontos.");
+    return h("div", { class: "card" }, list.map((o) => h("div", { class: "opp" },
+      h("span", { class: "cid" }, o.id),
+      h("span", {}, o.title, o.unblocks_gate && h("span", { class: "gate" }, "remove o gate")),
+      h("span", { class: "arrow" }, `${o.from_points} → 2 pts`, o.grade_after && o.grade_after !== R.grade ? ` · letra medida ${R.grade || "—"} → ${o.grade_after}` : ""),
+      h("span", { class: "gain" }, `+${NF(1).format(o.gain)}`))));
+  }
+
+
+  const KIND = { auto: "automática · 0 tokens", guided: "guiada · o Claude redige", mixed: "mista · script + Claude", manual: "só avisos" };
+  const tokFmt = (n) => NF(0).format(n);
+  function fixes() {
+    const list = D.fixes || [];
+    if (!list.length) return null;
+    const groupTitle = (id) => (D.meta.groups.find((g) => g.id === id) || {}).title || id;
+    const cards = list.map((f) => {
+      const missing = f.requires.filter((r) => !r.found);
+      return h("div", { class: "fix" },
+        h("div", { class: "fix-head" }, h("b", {}, f.title), h("span", { class: `chip ${f.kind}` }, KIND[f.kind] || f.kind), f.criteria.map((c) => h("span", { class: "chip mono" }, c)),
+          f.potential && h("span", { class: "gain", title: "teto: se os critérios medidos abaixo de 2 chegarem a 2" }, `até +${NF(1).format(f.potential.gain_total)} pts`)),
+        h("p", {}, f.summary),
+        h("div", { class: "meta2" },
+          (f.changes || f.guided_tasks) && h("span", {}, `escreve ${f.changes} arquivo(s)${f.guided_tasks ? ` + ${f.guided_tasks} tarefa(s) guiada(s)` : ""}`),
+          f.tokens && h("span", {}, `tokens ≈ ${tokFmt(f.tokens.low)}–${tokFmt(f.tokens.high)} (estimativa)`),
+          missing.length > 0 && h("span", { class: "warn2" }, `falta: ${missing.map((m) => m.tool + (m.blocking ? " (obrigatório)" : "")).join(", ")}`)),
+        f.notes.slice(0, 2).map((n) => h("div", { class: "meta2" }, h("span", {}, "aviso: " + n))));
+    });
+    return h("div", {}, h("div", { class: "card" }, cards),
+      h("p", { class: "callout" }, "Nada é alterado por este relatório. Para aplicar, peça ", h("span", { class: "mono-inline" }, "/repo-score"), " e escolha o plano de melhoria: as mudanças vão para uma ", h("b", {}, "branch nova"), ", a nota é recalculada nela e você decide o merge. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));
+  }
+  function panels() {
+    const list = D.panels || [];
+    if (!list.length) return null;
+    return list.map((p) => h("div", { class: "card", style: "margin-bottom:12px" },
+      h("div", { style: "font-weight:650;margin-bottom:6px" }, p.title),
+      p.items.map((i) => h("div", { class: "panel-item" }, h("span", { class: `st ${i.status}`, role: "img", "aria-label": i.status }, i.status === "ok" ? "✓" : i.status === "warn" ? "!" : i.status === "fail" ? "✕" : "i"), h("span", {}, i.label), h("span", { class: "sec" }, i.detail)))));
+  }
+
+  function notes() {
+    const unimpl = R.unmeasured.filter((u) => u.reason === D.meta.not_implemented_reason);
+    const other = R.unmeasured.filter((u) => u.reason !== D.meta.not_implemented_reason);
+    const out = [];
+    if (other.length) out.push(h("details", {}, h("summary", {}, `Não medidos por falta de fonte ou erro (${other.length})`), h("ul", { class: "reasons" }, other.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " · ", CRIT[u.id].title, " — ", u.reason)))));
+    if (unimpl.length) out.push(h("details", {}, h("summary", {}, `Aguardando coletor (${unimpl.length})`), h("p", { class: "muted", style: "font-size:13px;margin-top:6px" }, "Estes critérios ainda não têm medição automática nesta versão e ficam fora do cálculo."), h("ul", { class: "reasons" }, unimpl.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " · ", CRIT[u.id].title)))));
+    const na = R.not_applicable.filter((u) => u.reason !== D.meta.out_of_scope_reason);
+    if (na.length) out.push(h("details", {}, h("summary", {}, `Não aplicáveis (${na.length})`), h("ul", { class: "reasons" }, na.map((u) => h("li", {}, h("span", { class: "mono" }, u.id), " · ", CRIT[u.id].title, " — ", u.reason)))));
+    if (D.evidence_issues.length) out.push(h("details", {}, h("summary", {}, `Evidências descartadas na verificação (${D.evidence_issues.length})`), h("p", { class: "muted", style: "font-size:13px;margin-top:6px" }, "Evidência que não confere com o repo é descartada; sem nenhuma válida o critério vira não medido."), h("ul", { class: "reasons" }, D.evidence_issues.map((i) => h("li", {}, h("span", { class: "mono" }, i.id), " · ", i.evidence.path || i.evidence.sha || i.evidence.name || "", " — ", i.reason)))));
+    if (R.errors.length) out.push(h("details", {}, h("summary", {}, `Erros de cálculo (${R.errors.length})`), h("ul", { class: "reasons" }, R.errors.map((e) => h("li", {}, h("span", { class: "mono" }, e.id), " — ", e.message)))));
+    return out.length ? h("div", { class: "card" }, out) : null;
+  }
+
+  function theme() {
+    const order = ["auto", "light", "dark"];
+    let cur = "auto";
+    try { cur = localStorage.getItem("repo-score-theme") || "auto"; } catch (_) {}
+    const apply = () => { if (cur === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", cur); btn.textContent = `Tema: ${cur === "auto" ? "automático" : cur === "light" ? "claro" : "escuro"}`; };
+    const btn = h("button", { class: "theme", onclick: () => { cur = order[(order.indexOf(cur) + 1) % 3]; try { localStorage.setItem("repo-score-theme", cur); } catch (_) {} apply(); } });
+    apply();
+    return btn;
+  }
+
+  const m = D.meta;
+  const app = document.getElementById("app");
+  document.title = `${m.repo} · nota ${D.final.grade} · Repo Score`;
+  const parts = [
+    h("header", {}, h("div", {}, h("h1", {}, m.repo), h("div", { class: "meta" }, m.branch && h("span", { class: "tag mono" }, `${m.branch}${m.commit ? "@" + m.commit : ""}${m.dirty ? " +alterações" : ""}`), h("span", {}, new Date(m.generated_at).toLocaleString("pt-BR")), h("span", {}, `rubrica ${m.rubric_version}`), m.policy_source && h("span", {}, "política do repo aplicada"), m.selected_groups.length < m.groups.length && h("span", { class: "tag" }, "escopo parcial"))), theme()),
+    ...hero(),
+    composition(),
+    h("h2", {}, "Por dimensão"),
+    h("div", { class: "seg", role: "group", "aria-label": "Filtrar critérios" }, [["scored", "Medidos"], ["low", "Abaixo de 2"], ["unmeasured", "Não medidos"], ["all", "Todos"]].map(([k, label]) =>
+      h("button", { "aria-pressed": String(k === filter), "data-f": k, onclick: (ev) => { filter = k; document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.f === k))); dimEls.forEach((d) => d.classList.add("open")); applyFilter(); } }, label))),
+    h("p", { class: "muted", style: "font-size:13px;margin:8px 0 12px" }, "Clique em um critério para ver limiares e evidências; clique no caminho para copiá-lo."),
+    h("div", { class: "card" }, DIMS.map(dimension)),
+    h("h2", {}, "O que mais sobe a nota"),
+    opportunities(),
+    fixes() && h("h2", {}, "Como subir a nota"),
+    fixes(),
+    panels() && h("h2", {}, "Saúde do processo"),
+    panels(),
+    h("h2", {}, "Detalhes da medição"),
+    notes(),
+    h("footer", {}, `A nota é calculada por script a partir da rubrica ${m.rubric_version}; o Claude não atribui pontos. Cada pontuação carrega evidência verificada contra o repositório. Gerado por core-services-repo-score ${m.tool_version} · ${m.collectors.length} critérios com coletor automático.`),
+  ];
+  app.append(...parts.flat().filter(Boolean));
+
+  dimEls.forEach((d) => { if (d.querySelector('.crit[data-state="scored"]')) d.classList.add("open"); });
+  applyFilter();
+})();
+</script>
+</body>
+</html>

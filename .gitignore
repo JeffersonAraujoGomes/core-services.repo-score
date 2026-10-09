@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.repo-score/
+*.log
+.DS_Store

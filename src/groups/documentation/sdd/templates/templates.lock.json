@@ -1,0 +1,14 @@
+{
+  "source": "core-services.sdd-gate-ia",
+  "commit": "8e2127015faea83fd0673737bf8cb5c8a61b8f2e",
+  "files": {
+    "pre-commit.sh": "3aa4c940340081a633d1ba26dd72882e9fcf2f9ac32baac8f9c09dd130662366",
+    "sdd-analyze.sh": "4ee8c9caed50b10dc8095d55f7b19b0cb530e26b067e7be2569d25193a669a19",
+    "post-commit.sh": "fd01d127b3276ffaccf03dc0f97c9eb8c117b86346f70207a42b14d1a7b85b31",
+    "pre-push.sh": "71c62265703927c0c2e26653e92468d2c88432a753adb84abcdfbed3b5322c9c",
+    "spec-change-guard.sh": "0845dca759f67d0ae97b12910ce7ec7d4a1874a972b7cce049722e03c1cdad43",
+    "skill-template.md": "caf71f89806f06c9934b9e4dbac6cf056b172a14816386980cabd7c7e0aa77c3",
+    "readme-section.md": "6e1d54858707b16cc53eeedeea5f42172f036a41fe50e0ee851509bbca1d21c8",
+    "discovery-prompt.md": "a576a9a92c9eb51b65f0d49b58eced44c1800c81a979c54aae5a6d08a3226b3e"
+  }
+}

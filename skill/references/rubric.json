@@ -1,0 +1,1214 @@
+{
+ "version": "2.3.0",
+ "status": "draft",
+ "source": "Platform Repository Maturity Score — Draft v2.3 (08/out/2026)",
+ "calculation": {
+  "grades": [
+   {
+    "grade": "S",
+    "min_total": 97,
+    "requires": "no_zero_no_gate"
+   },
+   {
+    "grade": "A",
+    "min_total": 90
+   },
+   {
+    "grade": "B",
+    "min_total": 75,
+    "note": "corte do KPI (% de repos em >= B)"
+   },
+   {
+    "grade": "C",
+    "min_total": 60
+   },
+   {
+    "grade": "D",
+    "min_total": 40
+   },
+   {
+    "grade": "E",
+    "min_total": 0
+   }
+  ],
+  "gate_cap": "C",
+  "unmeasured_policy": "exclude",
+  "pr_regression": {
+   "tolerance_points": 0
+  }
+ },
+ "dimensions": [
+  {
+   "id": "security",
+   "title": "Segurança",
+   "weight": 20,
+   "criteria": [
+    {
+     "id": "S1",
+     "title": "Segredos versionados em config ou IaC (values*.yaml, ConfigMap, compose)",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 3,
+     "sources": [
+      "repo",
+      "iac"
+     ],
+     "blocking": true
+    },
+    {
+     "id": "S2",
+     "title": "Segredos no histórico do git",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 2,
+     "sources": [
+      "sca"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "S3",
+     "title": "SQL por concatenação/interpolação",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": true
+    },
+    {
+     "id": "S4",
+     "title": "PII em chamadas de log",
+     "unit": "/KLOC",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 0.5
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "S5",
+     "title": "Logging sensível de ORM fora de dev",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "S6",
+     "title": "API norte-sul sem autenticação (exposes_api)",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 3,
+     "sources": [
+      "repo",
+      "iac"
+     ],
+     "blocking": true,
+     "profile": "exposes_api"
+    },
+    {
+     "id": "S7",
+     "title": "Vulnerabilidades críticas/altas abertas",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 2
+     },
+     "weight": 3,
+     "sources": [
+      "sca"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "S8",
+     "title": "Runtime/toolchain fora de suporte",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "S9",
+     "title": "Imagem base não fixada / registro não aprovado",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "S10",
+     "title": "Serviço leste-oeste sem autenticação de workload (east_west_standard_defined)",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 2,
+     "sources": [
+      "iac"
+     ],
+     "blocking": false,
+     "profile": "east_west_standard_defined",
+     "note": "1 ponto quando só há NetworkPolicy (segmentação, não autenticação)",
+     "when_profile_off": "unmeasured"
+    },
+    {
+     "id": "S11",
+     "title": "Deployables com segredos referenciados por cofre, sem literal no IaC",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 2,
+     "sources": [
+      "iac"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "S12",
+     "title": "Lockfile de dependências presente e consistente",
+     "unit": "bool",
+     "direction": "boolean",
+     "points": {
+      "2": "locked",
+      "1": "present"
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "states": [
+      "locked",
+      "present",
+      "absent"
+     ],
+     "note": "locked = presente + CI em modo locked"
+    },
+    {
+     "id": "S13",
+     "title": "GitHub Actions fixadas por SHA",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 80
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    }
+   ]
+  },
+  {
+   "id": "tests",
+   "title": "Testes e integração contínua",
+   "weight": 20,
+   "criteria": [
+    {
+     "id": "T1",
+     "title": "Deployables sem testes reais (< min_test_cases)",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "T2",
+     "title": "Cobertura de linhas reportada pelo CI",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 75,
+      "1": 60
+     },
+     "weight": 3,
+     "sources": [
+      "ci"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "T3",
+     "title": "Exclusão de cobertura em domínio",
+     "unit": "%",
+     "direction": "lower",
+     "points": {
+      "2": 5,
+      "1": 30
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "T4",
+     "title": "Regras referenciadas por teste (rules_engine)",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 80,
+      "1": 50
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "profile": "rules_engine"
+    },
+    {
+     "id": "T5",
+     "title": "Módulos fora da unidade de build",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "T6",
+     "title": "Build e testes como checks obrigatórios no merge",
+     "unit": "bool",
+     "direction": "boolean",
+     "points": {
+      "2": "build+test",
+      "1": "build"
+     },
+     "weight": 3,
+     "sources": [
+      "gh"
+     ],
+     "blocking": false,
+     "states": [
+      "build+test",
+      "build",
+      "none"
+     ]
+    },
+    {
+     "id": "T7",
+     "title": "Pipeline da branch principal verde (últimos 20)",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 95,
+      "1": 80
+     },
+     "weight": 2,
+     "sources": [
+      "ci"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "T8",
+     "title": "Deployables com dependência externa cobertos por integração/contrato",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 80,
+      "1": 50
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "T9",
+     "title": "Taxa de testes instáveis",
+     "unit": "%",
+     "direction": "lower",
+     "points": {
+      "2": 1,
+      "1": 5
+     },
+     "weight": 1,
+     "sources": [
+      "ci"
+     ],
+     "blocking": false
+    }
+   ]
+  },
+  {
+   "id": "code",
+   "title": "Código",
+   "weight": 10,
+   "criteria": [
+    {
+     "id": "C1",
+     "title": "Métodos acima do limite de linhas",
+     "unit": "%",
+     "direction": "lower",
+     "points": {
+      "2": 2,
+      "1": 5
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C2",
+     "title": "Métodos com CCN alta",
+     "unit": "%",
+     "direction": "lower",
+     "points": {
+      "2": 2,
+      "1": 5
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C3",
+     "title": "Duplicação de blocos",
+     "unit": "%",
+     "direction": "lower",
+     "points": {
+      "2": 3,
+      "1": 8
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C4",
+     "title": "Erros engolidos/ignorados",
+     "unit": "/KLOC",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 0.5
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C5",
+     "title": "Uso incorreto de concorrência/assíncrono",
+     "unit": "/KLOC",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 0.3
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C6",
+     "title": "Estado global mutável em Domain/Application",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 2
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C7",
+     "title": "Logging não estruturado",
+     "unit": "/KLOC",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 0.5
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C8",
+     "title": "Linter configurado e passando no CI",
+     "unit": "bool",
+     "direction": "boolean",
+     "points": {
+      "2": "gating",
+      "1": "non-blocking"
+     },
+     "weight": 2,
+     "sources": [
+      "ci"
+     ],
+     "blocking": false,
+     "states": [
+      "gating",
+      "non-blocking",
+      "none"
+     ],
+     "note": "non-blocking = roda sem bloquear"
+    },
+    {
+     "id": "C9",
+     "title": "Rigor de compilação e estilo (null-safety, formatador, analisadores)",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 90,
+      "1": 50
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C10",
+     "title": "Números mágicos em código de regra (rules_engine)",
+     "unit": "/KLOC",
+     "direction": "lower",
+     "points": {
+      "2": 3,
+      "1": 10
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "profile": "rules_engine"
+    },
+    {
+     "id": "C11",
+     "title": "Identificadores proibidos e typos",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 5
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "C12",
+     "title": "Arquivos acima do limite de linhas",
+     "unit": "%",
+     "direction": "lower",
+     "points": {
+      "2": 1,
+      "1": 3
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    }
+   ]
+  },
+  {
+   "id": "architecture",
+   "title": "Arquitetura e acoplamento",
+   "weight": 15,
+   "criteria": [
+    {
+     "id": "A1",
+     "title": "Pacotes de infra referenciados pelo domínio",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 3
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A2",
+     "title": "Apps escrevendo no schema do dono além do permitido (has_database)",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "profile": "has_database"
+    },
+    {
+     "id": "A3",
+     "title": "Referência entre apps fora do módulo de contratos",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 2
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A4",
+     "title": "Tipos duplicados entre apps, por app",
+     "unit": "ratio",
+     "direction": "lower",
+     "points": {
+      "2": 1,
+      "1": 3
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A5",
+     "title": "Dependências cíclicas entre módulos",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A6",
+     "title": "Violações de direção entre camadas",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 2
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A7",
+     "title": "Lógica de negócio em diretórios compartilhados",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 2
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A8",
+     "title": "Diagrama como código com C1 e C2, parseável",
+     "unit": "bool",
+     "direction": "boolean",
+     "points": {
+      "2": "c1+c2",
+      "1": "partial"
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "states": [
+      "c1+c2",
+      "partial",
+      "none"
+     ],
+     "note": "partial = um nível ou com warnings"
+    },
+    {
+     "id": "A9",
+     "title": "Cobertura do diagrama: componentes detectados que aparecem nele",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 80
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A10",
+     "title": "Drift do diagrama vs. código, IaC e APM",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 2
+     },
+     "weight": 2,
+     "sources": [
+      "repo",
+      "dd"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A11",
+     "title": "Superfícies expostas (HTTP, gRPC, tópicos produzidos) com contrato declarado e versionado",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 80
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "A12",
+     "title": "Verificação de breaking change de contrato como check obrigatório no CI",
+     "unit": "bool",
+     "direction": "boolean",
+     "points": {
+      "2": "configured+required",
+      "1": "configured"
+     },
+     "weight": 2,
+     "sources": [
+      "gh"
+     ],
+     "blocking": false,
+     "states": [
+      "configured+required",
+      "configured",
+      "none"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "operability",
+   "title": "Operabilidade",
+   "weight": 20,
+   "criteria": [
+    {
+     "id": "O1",
+     "title": "Deployables com SLO declarado",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 3,
+     "sources": [
+      "dd"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O2",
+     "title": "Deployables com monitor e dashboard",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 2,
+     "sources": [
+      "dd"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O3",
+     "title": "Deployables com runbook de incidente",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O4",
+     "title": "Manifests com probes e resources",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 80
+     },
+     "weight": 2,
+     "sources": [
+      "iac"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O5",
+     "title": "Razão limit/request de CPU acima do máximo",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 2
+     },
+     "weight": 1,
+     "sources": [
+      "iac"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O6",
+     "title": "Manifests com tags de ownership e custo",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 80
+     },
+     "weight": 2,
+     "sources": [
+      "iac"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O7",
+     "title": "Deployables instrumentados (tracing/métricas)",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O8",
+     "title": "Logs estruturados com correlation id",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O9",
+     "title": "Clientes HTTP/gRPC com timeout e retry com backoff / circuit breaker",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "O10",
+     "title": "Consumidores de fila/tópico com idempotência e DLQ",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    }
+   ]
+  },
+  {
+   "id": "documentation",
+   "title": "Documentação",
+   "weight": 10,
+   "criteria": [
+    {
+     "id": "D1",
+     "title": "README por app com seções obrigatórias",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 3,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "D2",
+     "title": "OWNERS preenchido e consistente com CODEOWNERS",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 70
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "D3",
+     "title": "ADRs presentes e vivos",
+     "unit": "bool",
+     "direction": "boolean",
+     "points": {
+      "2": "recent",
+      "1": "present"
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "states": [
+      "recent",
+      "present",
+      "absent"
+     ],
+     "note": "recent = atualizado há ≤ 12 meses"
+    },
+    {
+     "id": "D4",
+     "title": "Referências de caminho válidas",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 98,
+      "1": 90
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "D5",
+     "title": "Índice da raiz completo",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 75
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "D6",
+     "title": "Documentação interna referenciada (sem órfãos)",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 90,
+      "1": 60
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "D7",
+     "title": "Specs ↔ regras ligadas (rules_engine)",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 90,
+      "1": 60
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "profile": "rules_engine"
+    },
+    {
+     "id": "D8",
+     "title": "Higiene de docs e arquivos residuais",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 3
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "D9",
+     "title": "Qualidade estrutural do diagrama (checklist)",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 90,
+      "1": 70
+     },
+     "weight": 2,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "zeroed_by": "A8"
+    }
+   ]
+  },
+  {
+   "id": "process",
+   "title": "Processo e entrega",
+   "weight": 5,
+   "criteria": [
+    {
+     "id": "P1",
+     "title": "Revisão obrigatória por PR",
+     "unit": "bool",
+     "direction": "boolean",
+     "points": {
+      "2": "owners",
+      "1": "approval"
+     },
+     "weight": 2,
+     "sources": [
+      "gh"
+     ],
+     "blocking": false,
+     "states": [
+      "owners",
+      "approval",
+      "none"
+     ],
+     "note": "owners = aprovação + code owners; approval = ≥ 1 aprovação"
+    },
+    {
+     "id": "P2",
+     "title": "Tag de HML existe no histórico",
+     "unit": "% apps",
+     "direction": "higher",
+     "points": {
+      "2": 100,
+      "1": 50
+     },
+     "weight": 2,
+     "sources": [
+      "iac"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "P3",
+     "title": "Migration habilitada sem pasta (has_database)",
+     "unit": "count",
+     "direction": "lower",
+     "points": {
+      "2": 0,
+      "1": 1
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "profile": "has_database"
+    },
+    {
+     "id": "P4",
+     "title": "Commits convencionais",
+     "unit": "%",
+     "direction": "higher",
+     "points": {
+      "2": 90,
+      "1": 60
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false
+    },
+    {
+     "id": "P5",
+     "title": "Versionamento central de dependências",
+     "unit": "bool",
+     "direction": "boolean",
+     "points": {
+      "2": "present+no-divergence",
+      "1": "present"
+     },
+     "weight": 1,
+     "sources": [
+      "repo"
+     ],
+     "blocking": false,
+     "states": [
+      "present+no-divergence",
+      "present",
+      "absent"
+     ]
+    },
+    {
+     "id": "P6",
+     "title": "CODEOWNERS granular",
+     "unit": "count regras",
+     "direction": "higher",
+     "points": {
+      "2": 3,
+      "1": 2
+     },
+     "weight": 1,
+     "sources": [
+      "gh"
+     ],
+     "blocking": false
+    }
+   ]
+  }
+ ]
+}

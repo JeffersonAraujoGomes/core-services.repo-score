@@ -1,0 +1,29 @@
+{
+  "name": "core-services-repo-score",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Platform Repository Maturity Score: skill local que avalia um repositório contra a rubrica v2.3",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "node scripts/build.mjs",
+    "install-skill": "node scripts/build.mjs && node scripts/install-skill.mjs",
+    "analyze": "node skill/scripts/repo-score.mjs analyze",
+    "plan": "node skill/scripts/repo-score.mjs plan",
+    "package-skill": "node scripts/build.mjs && node scripts/package-skill.mjs",
+    "sync-sdd-templates": "node scripts/sync-sdd-templates.mjs"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}
