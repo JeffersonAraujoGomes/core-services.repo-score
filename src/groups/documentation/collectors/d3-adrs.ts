@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import path from "node:path";
 import { jobEvidence, measured, type Collector } from "../../../collectors/context.js";
 
@@ -23,6 +24,16 @@ export const d3Adrs: Collector = {
     const out = ctx.git(["log", "-1", "--format=%cI", "--", ...adrs]);
     let last: Date | null = out && out.trim() ? new Date(out.trim()) : null;
     if (!last || Number.isNaN(last.getTime())) last = null;
+    // ADR criado ou alterado e ainda sem commit (a skill não commita; o commit é do usuário): vale a data do arquivo
+    const uncommitted = (ctx.git(["status", "--porcelain", "-z", "--untracked-files=all", "--", ...adrs]) ?? "").split("\0").filter((l) => l.length > 3 && !l.startsWith(" D") && !l.startsWith("D ")).map((l) => l.slice(3));
+    for (const f of uncommitted) {
+      try {
+        const m = statSync(path.join(ctx.root, f)).mtime;
+        if (!last || m > last) last = m;
+      } catch {
+        /* arquivo sumiu entre a listagem e a leitura */
+      }
+    }
     const sample = adrs[adrs.length - 1]!;
     if (!last) {
       return [measured("D3", "present", [{ kind: "file", path: sample, line: 1, note: `${adrs.length} ADRs; data de atualização desconhecida (sem histórico git)` }], "medium")];

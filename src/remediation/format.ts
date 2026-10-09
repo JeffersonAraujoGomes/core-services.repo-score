@@ -31,8 +31,8 @@ export function formatPreview(items: PreviewItem[], target?: { mode: "in_place" 
     : target.session
       ? `PRÉVIA (nada foi escrito). Há uma sessão aberta: ao aplicar, as ações entram na MESMA branch ${target.session.branch}, sem criar outra. A prévia considera a branch atual; para ver o efeito sobre a sessão, rode-a com a branch da sessão ativa.`
       : target.mode === "in_place"
-        ? `PRÉVIA (nada foi escrito). Ao aplicar, as alterações serão COMMITADAS NA BRANCH ATUAL (${target.branch}), um commit por ação, sem criar branch nova.`
-        : `PRÉVIA (nada foi escrito). Ao aplicar, será criada uma BRANCH NOVA (${target.reason}); a branch atual não é tocada.`;
+        ? `PRÉVIA (nada foi escrito). Ao aplicar, os arquivos serão criados/alterados/removidos NO WORKING TREE da branch atual (${target.branch}), sem commit e sem branch nova: o commit é seu.`
+        : `PRÉVIA (nada foi escrito). Ao aplicar, será criada uma BRANCH NOVA (${target.reason}) e os arquivos ficam no working tree dela, sem commit: o commit é seu; a branch atual não é tocada.`;
   const L = [where];
   for (const it of items) {
     L.push(`\n[${it.id}] ${it.title}`);
@@ -77,12 +77,12 @@ export function formatStart(s: FixState): string {
   if (s.status === "nothing_to_do") return `Nada a fazer: as ações selecionadas não produziram alterações. Nenhuma branch foi criada; você segue em ${s.base_branch ?? s.base_commit}.`;
   const L = s.mode === "in_place"
     ? [
-        `ALTERAÇÕES NA BRANCH ATUAL: ${s.branch} (nenhuma branch nova foi criada).`,
-        `Ponto de partida: ${s.branch}@${s.base_commit.slice(0, 8)}; cada ação vira um commit e dá para desfazer (fix finish --decision discard --confirm).`,
+        `ARQUIVOS ALTERADOS NA BRANCH ATUAL: ${s.branch} (nenhuma branch nova e nenhum commit: o commit é seu).`,
+        `Ponto de partida: ${s.branch}@${s.base_commit.slice(0, 8)}.`,
         `Nota de partida: ${s.baseline.grade} · ${fmt(s.baseline.total)}/100`,
       ]
     : [
-        `BRANCH CRIADA: ${s.branch}`,
+        `BRANCH CRIADA: ${s.branch}${s.auto_commit ? "" : " (nenhum commit foi feito: o commit é seu)"}`,
         `Origem: ${s.base_branch ?? "(HEAD destacado)"}@${s.base_commit.slice(0, 8)}. A branch de origem NÃO foi alterada.`,
         `Você está agora em ${s.branch}.`,
         `Nota de partida (medida na origem): ${s.baseline.grade} · ${fmt(s.baseline.total)}/100`,
@@ -90,6 +90,10 @@ export function formatStart(s: FixState): string {
   if (s.commits.length) {
     L.push(s.mode === "in_place" ? "Commits:" : "Commits na branch nova:");
     for (const c of s.commits) L.push(`  ${c.sha} ${c.subject}`);
+  } else if (!s.auto_commit && s.touched?.length) {
+    L.push(`Arquivos escritos pelos scripts (${s.touched.length}), sem commit:`);
+    for (const f of s.touched.slice(0, 15)) L.push(`  ${f}`);
+    if (s.touched.length > 15) L.push(`  … e mais ${s.touched.length - 15}`);
   }
   if (s.status === "commit_blocked" && s.blocked) {
     L.push(`\nCOMMIT BLOQUEADO por hook (${s.blocked.action}). As alterações estão aplicadas e preparadas, mas sem commit:`);
@@ -147,9 +151,22 @@ export function formatSeal(r: SealResult): string {
     L.push("Commits na branch:");
     for (const c of s.commits) L.push(`  ${c.sha} ${c.subject}`);
   }
-  if (r.files) L.push(`Arquivos alterados em relação à origem:\n${r.files.split("\n").map((l) => `  ${l}`).join("\n")}`);
+  if (r.files) {
+    const lines = r.files.split("\n");
+    L.push(`${s.auto_commit ? "Arquivos alterados em relação à origem" : `Arquivos criados, alterados ou removidos (${lines.length}), sem commit`}:\n${lines.slice(0, 40).map((l) => `  ${l}`).join("\n")}${lines.length > 40 ? `\n  … e mais ${lines.length - 40}` : ""}`);
+  }
   for (const p of s.post_steps) L.push(`Fora da branch: ${p}`);
   L.push(`Relatório: ${r.report}`);
+  if (!s.auto_commit) {
+    const titles = s.actions.join(", ");
+    L.push(`\nCOMMIT É COM VOCÊ (a skill não commitou nada). Revise com \`git status\` e \`git diff\`, e commite quando quiser. Mensagem sugerida: docs(repo-score): ${titles}`);
+    if (s.mode === "in_place") {
+      L.push(`Não há merge nem decisão pendente; \`fix finish --decision keep\` só encerra o registro desta correção.`);
+      return L.join("\n");
+    }
+    L.push(`\nDEPOIS DE REVISAR (nada foi mesclado nem enviado):\n  keep     → fix finish --decision keep    (fica em ${s.branch} com os arquivos para você commitar)\n  merge    → fix finish --decision merge   (só depois de você commitar: mescla ${s.branch} em ${s.base_branch ?? "origem"}, sem push)\n  discard  → fix finish --decision discard --confirm   (apaga a branch e os arquivos não commitados)`);
+    return L.join("\n");
+  }
   if (s.mode === "in_place") {
     L.push(`\nAs alterações já estão commitadas em ${s.branch} (nada foi enviado). Para desfazer: fix finish --decision discard --confirm (commits de revert). Não há merge nem decisão pendente.`);
     return L.join("\n");
@@ -164,7 +181,7 @@ export function formatFinish(r: FinishResult): string {
 
 export function formatState(s: FixState | null): string {
   if (!s) return "Nenhuma correção registrada para este repo.";
-  return `${s.mode === "in_place" ? "Correção na branch atual" : "Sessão de correção"}: ${s.status} · branch ${s.branch} (origem ${s.base_branch ?? "HEAD destacado"}@${s.base_commit.slice(0, 8)}) · ações ${s.actions.join(", ")} · ${s.commits.length} commit(s)`;
+  return `${s.mode === "in_place" ? "Correção na branch atual" : "Sessão de correção"}: ${s.status} · branch ${s.branch} (origem ${s.base_branch ?? "HEAD destacado"}@${s.base_commit.slice(0, 8)}) · ações ${s.actions.join(", ")} · ${s.auto_commit ? `${s.commits.length} commit(s)` : `${s.touched?.length ?? 0} arquivo(s) escrito(s) pelos scripts, sem commit`}`;
 }
 
 export type { ReportData };

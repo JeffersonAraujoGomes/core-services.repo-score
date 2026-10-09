@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { analyze, persist, repoSlug, reportsHome, type ReportData } from "../analyze.js";
 import { createCtx } from "../collectors/context.js";
@@ -36,6 +36,12 @@ export interface FixState {
   root: string;
   /** `in_place`: commits na branch atual (padrão; `branch` = a branch atual). `new_branch`: branch dedicada (SDD ou --new-branch). */
   mode?: "new_branch" | "in_place";
+  /** A skill só escreve arquivos; o commit é do usuário. `true` só com `--commit` explícito (um commit por ação). */
+  auto_commit?: boolean;
+  /** Arquivos que os scripts das ações criaram, alteraram ou removeram (as tarefas guiadas escrevem além disso). */
+  touched?: string[];
+  /** A correção começou com alterações do usuário na árvore (--allow-dirty): desfazer automático é recusado. */
+  carried_dirty?: boolean;
   base_branch: string | null;
   base_commit: string;
   branch: string;
@@ -159,9 +165,13 @@ export function previewFixes(opts: { root: string; actionIds: string[]; params: 
   return out;
 }
 
-/** Aplica as ações em ordem sobre a branch atual (cada uma planejada sobre o estado já alterado) e commita uma a uma. */
+/**
+ * Aplica as ações em ordem no working tree (cada uma planejada sobre o estado já alterado). Só escreve arquivos: o commit
+ * é do usuário. Com `auto_commit` (--commit), commita uma a uma.
+ */
 function runActions(root: string, policyPath: string | undefined, actions: Action[], state: FixState, params: Record<string, string>, skipHooks: boolean, now: Date): void {
   const { policy } = loadPolicy(root, policyPath);
+  const preDirty = new Set(dirtyPaths(root));
   for (const [i, action] of actions.entries()) {
     const ctx = createCtx(root, policy, now);
     const plan = action.plan(ctx, params);
@@ -172,7 +182,10 @@ function runActions(root: string, policyPath: string | undefined, actions: Actio
     state.guided_tasks = [...state.guided_tasks.filter((t) => !plan.guided.some((g) => g.id === t.id)), ...plan.guided];
     if (plan.changes.length === 0) continue;
     for (const c of plan.changes) safeTarget(root, c.path);
+    for (const c of plan.changes) if (preDirty.has(c.path)) state.notes.push(`${action.id}: ${c.path} já tinha alterações suas não commitadas; as mudanças desta ação foram somadas ao arquivo (revise com git diff).`);
     const touched = applyChanges(root, plan.changes);
+    state.touched = [...new Set([...(state.touched ?? []), ...touched])];
+    if (!state.auto_commit) continue;
     try {
       const c = commit(root, touched, `docs(repo-score): ${action.title}\n\nAção ${action.id}; critérios: ${action.criteria.join(", ")}.${skipHooks ? "\n\nHooks pulados com aprovação explícita do usuário (SDD_SKIP=1)." : ""}`, skipHooks);
       if (c) state.commits.push(c);
@@ -200,7 +213,17 @@ export interface StartOptions {
   branchName?: string;
   /** Força a branch nova mesmo para ações que gravam na atual. */
   newBranch?: boolean;
+  /** Commita uma ação por vez (a skill NÃO usa: o padrão é só escrever os arquivos e deixar o commit com o usuário). */
+  commit?: boolean;
   now?: Date;
+}
+
+/** Caminhos com alterações não commitadas (modificados, removidos ou novos). */
+function dirtyPaths(root: string): string[] {
+  return (tryGit(root, ["status", "--porcelain", "-z", "--untracked-files=all"]) ?? "")
+    .split("\0")
+    .filter((l) => l.length > 3)
+    .map((l) => l.slice(3));
 }
 
 /** Onde as ações vão gravar: na branch atual, ou numa branch nova (SDD, --new-branch, HEAD destacado ou sessão aberta). */
@@ -215,7 +238,7 @@ export function fixTarget(opts: { root: string; actionIds: string[]; newBranch?:
   const dedicated = actions.find((a) => a.branch === "new");
   if (dedicated) return { mode: "new_branch", branch: null, reason: `${dedicated.id} exige branch dedicada`, session: null };
   if (!current) return { mode: "new_branch", branch: null, reason: "HEAD destacado: não há branch atual para commitar", session: null };
-  return { mode: "in_place", branch: current, reason: "as alterações vão para a branch atual, um commit por ação", session: null };
+  return { mode: "in_place", branch: current, reason: "as alterações ficam no working tree da branch atual, sem commit (o commit é seu)", session: null };
 }
 
 function commit(root: string, paths: string[] | null, message: string, skipHooks: boolean): CommitInfo | null {
@@ -256,14 +279,14 @@ function addToSession(opts: StartOptions, root: string, state: FixState, actions
     git(root, ["switch", state.branch]);
   }
   const previous: FixStatus = state.status;
-  const had = { commits: state.commits.length, tasks: new Set(state.guided_tasks.map((t) => t.id)) };
-  if (!isClean(root) && !commitPending(root, state, !!opts.skipHooks)) {
+  const had = { commits: state.commits.length, touched: (state.touched ?? []).length, tasks: new Set(state.guided_tasks.map((t) => t.id)) };
+  if (state.auto_commit && !isClean(root) && !commitPending(root, state, !!opts.skipHooks)) {
     saveState(state);
     return state;
   }
   runActions(root, opts.policyPath, actions, state, opts.params, !!opts.skipHooks, now);
   const added_tasks = state.guided_tasks.map((t) => t.id).filter((id) => !had.tasks.has(id));
-  const changed = state.commits.length > had.commits || added_tasks.length > 0;
+  const changed = state.commits.length > had.commits || (state.touched ?? []).length > had.touched || added_tasks.length > 0;
   state.session = { reused: true, added_actions: changed ? actions.map((a) => a.id) : [], added_tasks, rounds: (state.session?.rounds ?? 1) + (changed ? 1 : 0) };
   if (changed) {
     state.actions = [...new Set([...state.actions, ...actions.map((a) => a.id)])];
@@ -290,7 +313,10 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
   }
   if (target.session) return addToSession(opts, root, target.session, actions, now);
   const inPlace = target.mode === "in_place";
-  if (!isClean(root) && !opts.allowDirty) {
+  const autoCommit = !!opts.commit;
+  // sem commit automático, na branch atual, as alterações do usuário convivem com as da skill (o commit é dele); nos demais casos a árvore precisa estar limpa
+  const mustBeClean = autoCommit || !inPlace;
+  if (mustBeClean && !isClean(root) && !opts.allowDirty) {
     throw new FixError("há alterações não commitadas na branch atual. Commite ou guarde (git stash) antes, ou use --allow-dirty (as alterações viajam para a branch nova, misturadas às da correção).");
   }
 
@@ -319,6 +345,9 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
     params: opts.params,
     created_at: now.toISOString(),
     status: "started",
+    auto_commit: autoCommit,
+    touched: [],
+    ...(!isClean(root) ? { carried_dirty: true } : {}),
     session: { reused: false, added_actions: actions.map((a) => a.id), added_tasks: [], rounds: 1 },
     guided_tasks: [],
     post_steps: [],
@@ -334,7 +363,7 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
     return state;
   }
 
-  if (state.commits.length === 0 && state.guided_tasks.length === 0) {
+  if (state.commits.length === 0 && state.guided_tasks.length === 0 && (state.touched ?? []).length === 0) {
     if (!inPlace) {
       git(root, baseBranch ? ["switch", baseBranch] : ["switch", "--detach", baseCommit]);
       git(root, ["branch", "-D", branch]);
@@ -391,7 +420,7 @@ export async function sealFix(opts: { root: string; rubricPath: string; policyPa
   if (!["started", "commit_blocked", "sealed"].includes(state.status)) throw new FixError(`a correção está ${state.status}; nada a selar`);
   if (currentBranch(root) !== state.branch) throw new FixError(`você não está na branch da correção. Rode: git switch ${state.branch}`);
 
-  if (!isClean(root)) commitPending(root, state, !!opts.skipHooks);
+  if (state.auto_commit && !isClean(root)) commitPending(root, state, !!opts.skipHooks);
   else if (state.status === "commit_blocked") {
     delete state.blocked;
     state.status = "started";
@@ -405,8 +434,9 @@ export async function sealFix(opts: { root: string; rubricPath: string; policyPa
   state.pending = after.data.fixes.filter((f) => state.actions.includes(f.id) && f.prompt !== null && (f.potential?.gain_total ?? 0) > 0).map((f) => ({ id: f.id, title: f.title, gain: f.potential!.gain_total }));
   if (state.status !== "commit_blocked") state.status = "sealed";
   saveState(state);
-  const files = tryGit(root, ["diff", "--stat", `${state.base_commit}...HEAD`]) ?? "";
-  return { state, data: after.data, files: files.trim(), report: persisted.html };
+  // sem commit automático, o que mudou está no working tree; com commits, o diff em relação à origem
+  const files = state.auto_commit ? (tryGit(root, ["diff", "--stat", `${state.base_commit}...HEAD`]) ?? "") : (tryGit(root, ["status", "--short", "--untracked-files=all"]) ?? "");
+  return { state, data: after.data, files: files.trimEnd(), report: persisted.html };
 }
 
 // ─────────────────────────────────────── finish ───────────────────────────────────────
@@ -429,16 +459,34 @@ export function finishFix(opts: { root: string; decision: Decision; confirm?: bo
   const back = () => git(root, state.base_branch ? ["switch", state.base_branch] : ["switch", "--detach", state.base_commit]);
 
   if (opts.decision === "discard") {
-    if (!opts.confirm) throw new FixError("descartar apaga a branch e todo o trabalho dela; confirme com --confirm");
+    if (!opts.confirm) throw new FixError("descartar apaga a branch e todo o trabalho dela, inclusive os arquivos ainda não commitados; confirme com --confirm");
+    if (state.carried_dirty) throw new FixError("a correção começou com alterações suas não commitadas (--allow-dirty); descartar a branch as apagaria junto. Desfaça com git, à mão.");
     git(root, state.base_branch ? ["switch", "-f", state.base_branch] : ["switch", "-f", "--detach", state.base_commit]);
     git(root, ["branch", "-D", state.branch]);
+    // a troca forçada restaura os arquivos rastreados; os arquivos NOVOS (não rastreados) criados pelos scripts são removidos aqui
+    const removed: string[] = [];
+    for (const rel of state.touched ?? []) {
+      if (tryGit(root, ["ls-files", "--error-unmatch", "--", rel]) !== null) continue;
+      const abs = safeTarget(root, rel);
+      if (existsSync(abs)) {
+        rmSync(abs, { force: true });
+        removed.push(rel);
+      }
+    }
+    const leftover = dirtyPaths(root);
     state.status = "discarded";
     saveState(state);
-    return { state, decision: "discard", message: `Branch ${state.branch} descartada. Você voltou para ${state.base_branch ?? state.base_commit}.` };
+    return { state, decision: "discard", message: `Branch ${state.branch} descartada. Você voltou para ${state.base_branch ?? state.base_commit}; ${removed.length} arquivo(s) novo(s) dos scripts removido(s).${leftover.length ? ` Sobraram ${leftover.length} arquivo(s) não rastreado(s) (escritos pelas tarefas guiadas); apague se quiser: ${leftover.slice(0, 10).join(", ")}${leftover.length > 10 ? ", …" : ""}` : ""}` };
   }
 
-  if (!isClean(root)) throw new FixError("a branch da correção tem alterações não commitadas; rode fix seal antes (ou commite)");
   if (state.status === "commit_blocked") throw new FixError("há um commit bloqueado por hook; resolva (fix seal --skip-hooks, se aprovado) antes de concluir");
+  if (!isClean(root)) {
+    // a skill não commita: as alterações estão no working tree da branch. Manter = ficar nela e commitar à mão; mesclar só leva commits.
+    if (opts.decision === "merge") throw new FixError(`há alterações não commitadas na branch ${state.branch}: commite (ou guarde) antes. O merge só leva commits.`);
+    state.status = "kept";
+    saveState(state);
+    return { state, decision: "keep", message: `Mantido: você segue na branch ${state.branch} com as alterações ainda não commitadas. Revise (git status, git diff) e commite quando quiser; depois mescle em ${state.base_branch ?? state.base_commit} do seu jeito.` };
+  }
   back();
   if (opts.decision === "keep") {
     state.status = "kept";
@@ -459,6 +507,14 @@ export function finishFix(opts: { root: string; decision: Decision; confirm?: bo
 
 /** Correção na branch atual: não há branch para mesclar. `keep` encerra; `discard` desfaz com commits de revert (nada é reescrito). */
 function finishInPlace(root: string, state: FixState, opts: { decision: Decision; confirm?: boolean }): FinishResult {
+  if (!state.auto_commit) {
+    if (opts.decision === "keep") {
+      state.status = "kept";
+      saveState(state);
+      return { state, decision: "keep", message: `Encerrado. As alterações estão no working tree de ${state.branch}, sem commit: revise (git status, git diff) e commite quando quiser.` };
+    }
+    throw new FixError(`a skill não commita: as alterações estão só no working tree de ${state.branch}, então não há merge nem commit a desfazer. Para descartar, use git (git restore / git checkout -- <arquivo>, e apague os arquivos novos), com a lista que o fix seal mostrou.`);
+  }
   if (opts.decision === "merge") throw new FixError(`as alterações já estão na branch ${state.branch} (commits desta correção): não há merge a fazer. Use keep para encerrar ou discard para desfazer.`);
   if (opts.decision === "keep") {
     state.status = "kept";

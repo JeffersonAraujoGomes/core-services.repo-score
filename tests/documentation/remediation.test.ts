@@ -30,7 +30,7 @@ const stdSpec = (title: string, files: string[]) =>
   `# ${title}\n\n## O que a regra faz\n\nDescreve o comportamento atual de ${title}.\n\n## Parâmetros\n\nSem parâmetros: a regra não depende de valores configuráveis.\n\n## Contexto\n\nExiste por causa da política interna; nada frágil foi encontrado.\n\n---\n\n## Referências técnicas\n\n${files.map((f) => `Arquivo: ${f}`).join("\n")}\n`;
 
 const start = (r: FixtureRepo, actionIds: string[], extra: Partial<Parameters<typeof startFix>[0]> = {}) =>
-  startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds, params: {}, groups: ["documentation"], newBranch: true, ...extra });
+  startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds, params: {}, groups: ["documentation"], newBranch: true, commit: true, ...extra });
 const seal = (r: FixtureRepo, skipHooks = false) => sealFix({ root: r.root, rubricPath: RUBRIC_PATH, skipHooks });
 const branchOf = (r: FixtureRepo) => r.git("symbolic-ref", "--short", "HEAD").trim();
 const sha = (r: FixtureRepo, ref = "HEAD") => r.git("rev-parse", ref).trim();
@@ -565,9 +565,9 @@ describe("sessão única: vários cliques de Otimizar nota, uma só branch", () 
   });
 });
 
-describe("branch atual por padrão (só o SDD usa branch nova)", () => {
+describe("branch atual por padrão (só o SDD usa branch nova); com --commit, um commit por ação", () => {
   const go = (r: FixtureRepo, ids: string[], extra: Partial<Parameters<typeof startFix>[0]> = {}) =>
-    startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds: ids, params: {}, groups: ["documentation"], ...extra });
+    startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds: ids, params: {}, groups: ["documentation"], commit: true, ...extra });
 
   it("ação comum commita na branch atual, sem criar branch, e o seal mede ali mesmo", async () => {
     const r = dirtyDocsRepo();
@@ -664,5 +664,98 @@ describe("branch atual por padrão (só o SDD usa branch nova)", () => {
     const resumed = await resumeFix({ root: r.root, skipHooks: true });
     expect(resumed.status).toBe("started");
     expect(r.git("status", "--porcelain").trim()).toBe("");
+  });
+});
+
+describe("a skill não commita: só cria, altera e remove arquivos (o commit é do usuário)", () => {
+  const go = (r: FixtureRepo, ids: string[], extra: Partial<Parameters<typeof startFix>[0]> = {}) =>
+    startFix({ root: r.root, rubricPath: RUBRIC_PATH, actionIds: ids, params: {}, groups: ["documentation"], ...extra });
+
+  it("na branch atual: arquivos mudam no working tree, o HEAD não se move, nenhuma branch nasce, e o seal mede e lista", async () => {
+    const r = dirtyDocsRepo();
+    const head = sha(r);
+    const state = await go(r, ["doc-hygiene"]);
+    expect(state.auto_commit).toBe(false);
+    expect(state.commits).toEqual([]);
+    expect(state.touched!.length).toBeGreaterThanOrEqual(5); // 5 remoções (+ o .gitignore)
+    expect(sha(r)).toBe(head);
+    expect(branchOf(r)).toBe("main");
+    expect(r.git("branch", "--list").trim().split("\n")).toHaveLength(1);
+    expect(existsSync(path.join(r.root, ".DS_Store"))).toBe(false);
+    expect(r.git("status", "--porcelain").trim().split("\n").length).toBeGreaterThanOrEqual(5); // remoções não commitadas
+
+    const sealed = await seal(r);
+    expect(sealed.state.after!.criteria["D8"]).toBe(2);
+    expect(sha(r)).toBe(head);
+    const text = formatSeal(sealed);
+    expect(text).toContain("COMMIT É COM VOCÊ");
+    expect(text).toContain("sem commit");
+    expect(text).toContain(".DS_Store");
+    expect(text).not.toContain("commitadas em");
+    expect(text).not.toContain("DECISÃO");
+  });
+
+  it("cliques seguidos convivem com o que ficou sem commit (e as alterações do usuário são avisadas)", async () => {
+    const r = dirtyDocsRepo();
+    writeFileSync(path.join(r.root, "a.bak"), "editado por mim, ainda sem commit");
+    const first = await go(r, ["doc-hygiene"]); // árvore suja: permitido, o commit é do usuário
+    expect(first.notes.join(" ")).toContain("a.bak já tinha alterações suas");
+    await seal(r);
+    const second = await go(r, ["doc-adr"]);
+    expect(second.mode).toBe("in_place");
+    expect(second.touched!.some((f) => f.startsWith("docs/adr"))).toBe(true);
+    expect(r.git("log", "--format=%s")).not.toContain("repo-score");
+    expect(r.git("status", "--porcelain").trim()).not.toBe("");
+  });
+
+  it("finish na branch atual: keep só encerra; merge e discard explicam que não há commit a mesclar ou desfazer", async () => {
+    const r = dirtyDocsRepo();
+    await go(r, ["doc-hygiene"]);
+    await seal(r);
+    expect(() => finishFix({ root: r.root, decision: "merge" })).toThrow(/não commita/);
+    expect(() => finishFix({ root: r.root, decision: "discard", confirm: true })).toThrow(/git restore/);
+    expect(finishFix({ root: r.root, decision: "keep" }).message).toContain("sem commit");
+  });
+
+  it("sdd-adopt: cria a branch nova, escreve os arquivos e para aí; mesclar só depois que o usuário commitar", async () => {
+    const r = dirtyDocsRepo();
+    const head = sha(r);
+    const s = await go(r, ["sdd-adopt"]);
+    expect(s.mode).toBe("new_branch");
+    expect(s.branch).toMatch(/^docs\/repo-score-/);
+    expect(sha(r)).toBe(head); // nenhum commit
+    expect(existsSync(path.join(r.root, ".sdd/manifest.json"))).toBe(true);
+    expect(r.git("status", "--porcelain").trim()).not.toBe("");
+    await seal(r);
+    expect(() => finishFix({ root: r.root, decision: "merge" })).toThrow(/não commitadas/);
+    r.git("add", "-A");
+    r.git("commit", "-q", "-m", "docs: sdd (commit manual)");
+    const merged = finishFix({ root: r.root, decision: "merge" });
+    expect(merged.message).toContain("mesclada");
+    expect(branchOf(r)).toBe("main");
+    expect(existsSync(path.join(r.root, ".sdd/manifest.json"))).toBe(true);
+  });
+
+  it("sdd-adopt: keep fica na branch com os arquivos; discard (--confirm) apaga a branch e os arquivos", async () => {
+    const keep = dirtyDocsRepo();
+    const k = await go(keep, ["sdd-adopt"]);
+    const res = finishFix({ root: keep.root, decision: "keep" });
+    expect(res.message).toContain("ainda não commitadas");
+    expect(branchOf(keep)).toBe(k.branch);
+    expect(existsSync(path.join(keep.root, ".sdd/manifest.json"))).toBe(true);
+
+    const drop = dirtyDocsRepo();
+    const d = await go(drop, ["sdd-adopt"]);
+    expect(() => finishFix({ root: drop.root, decision: "discard" })).toThrow(/--confirm/);
+    finishFix({ root: drop.root, decision: "discard", confirm: true });
+    expect(branchOf(drop)).toBe("main");
+    expect(drop.git("branch", "--list", d.branch).trim()).toBe("");
+    expect(existsSync(path.join(drop.root, ".sdd/manifest.json"))).toBe(false);
+  });
+
+  it("na branch nova a árvore suja continua recusada (a troca de branch a levaria junto)", async () => {
+    const r = dirtyDocsRepo();
+    r.write("meu-arquivo.txt", "não commitado");
+    await expect(go(r, ["sdd-adopt"])).rejects.toThrow(/alterações não commitadas/);
   });
 });

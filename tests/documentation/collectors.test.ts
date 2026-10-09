@@ -90,6 +90,21 @@ describe("D3 · ADRs", () => {
     expect(valueOf(await run1(d3Adrs, none.ctx({}, now)))).toBe("absent");
   });
 
+  it("ADR criado ou alterado e ainda sem commit conta como recente (o commit é do usuário)", async () => {
+    const stale = makeRepo();
+    stale.write("docs/adr/0001-x.md", "# x");
+    stale.commit("feat: adr", "2024-01-01T10:00:00Z");
+    expect(valueOf(await run1(d3Adrs, stale.ctx({}, now)))).toBe("present");
+    stale.write("docs/adr/0002-novo.md", "# novo, sem commit"); // criado pela skill, ainda não commitado
+    expect(valueOf(await run1(d3Adrs, stale.ctx({}, now)))).toBe("recent");
+
+    const edited = makeRepo();
+    edited.write("docs/adr/0001-x.md", "# x");
+    edited.commit("feat: adr", "2024-01-01T10:00:00Z");
+    edited.write("docs/adr/0001-x.md", "# x editado, sem commit");
+    expect(valueOf(await run1(d3Adrs, edited.ctx({}, now)))).toBe("recent");
+  });
+
   it("README e template dentro da pasta de ADR não contam como ADR", async () => {
     const r = makeRepo();
     r.write("docs/adr/README.md", "# índice");

@@ -59,17 +59,17 @@ Grupos não escolhidos ficam fora do cálculo (como dimensão N/A) e o total usa
 
 ## Correções e o SDD (grupo Documentação)
 
-Depois de abrir o relatório, cada ponto de "Como subir a nota" tem um botão **Otimizar nota** que copia o comando para a sessão do Claude e inicia só aquela correção na branch atual (só a adoção do SDD usa branch nova). As ações são ranqueadas pelo ganho potencial de nota, com tipo (automática, guiada ou mista), tokens estimados e pré-requisitos. A principal é **adotar o SDD** (specs vivas + gate de commit com IA), incorporado do projeto `core-services.sdd-gate-ia`.
+Depois de abrir o relatório, cada ponto de "Como subir a nota" tem um botão **Otimizar nota** que copia o comando para a sessão do Claude e inicia só aquela correção. A skill só cria, altera e remove arquivos: **o commit é seu** (só a adoção do SDD usa uma branch nova). As ações são ranqueadas pelo ganho potencial de nota, com tipo (automática, guiada ou mista), tokens estimados e pré-requisitos. A principal é **adotar o SDD** (specs vivas + gate de commit com IA), incorporado do projeto `core-services.sdd-gate-ia`.
 
-**Onde grava:** as ações comuns commitam na **branch atual**, um commit por ação, e dá para desfazer (`fix finish --decision discard --confirm` cria commits de revert). A adoção do SDD é a exceção: usa uma **branch nova** (`docs/repo-score-AAAAMMDD-HHMM`) e a atual não é tocada; com essa sessão aberta, os demais botões entram nela. A nota é **recalculada** depois e comparada com a de partida; na branch nova quem decide o merge é o usuário (`merge`, `keep` ou `discard`). Nunca há push. Árvore suja é recusada, um commit bloqueado por hook do time não é contornado sem aprovação, e arquivos que não são UTF-8 nunca são reescritos.
+**Onde grava:** a skill **não commita**: cria, altera e remove arquivos e deixa o commit com você (`git diff`, `git commit`). As ações comuns escrevem no working tree da **branch atual**. A adoção do SDD é a exceção: cria uma **branch nova** (`docs/repo-score-AAAAMMDD-HHMM`), a atual não é tocada, e com essa sessão aberta os demais botões entram nela. A nota é **recalculada** depois e comparada com a de partida, e o `fix seal` lista os arquivos e sugere a mensagem de commit. `--commit` (opt-in do CLI, nunca usado pela skill) commita uma ação por vez. Nunca há push. Árvore suja é recusada, um commit bloqueado por hook do time não é contornado sem aprovação, e arquivos que não são UTF-8 nunca são reescritos.
 
 ```bash
 CLI=skill/scripts/repo-score.mjs
 node $CLI fixes <repo> --groups documentation                                  # ações e ganho potencial
 node $CLI fix preview <repo> --actions doc-hygiene,doc-owners                  # não escreve nada
-node $CLI fix start <repo> --actions sdd-adopt --param rule_globs='src/Domain/Rules/*'   # cria a branch
-node $CLI fix seal <repo>                                                      # commita o que falta e recalcula a nota
-node $CLI fix finish <repo> --decision merge|keep|discard [--confirm]
+node $CLI fix start <repo> --actions sdd-adopt --param rule_globs='src/Domain/Rules/*'   # cria a branch, sem commit
+node $CLI fix seal <repo>                                                      # recalcula a nota e lista os arquivos (commit é seu)
+node $CLI fix finish <repo> --decision keep|merge|discard [--confirm]
 ```
 
 **D7 (specs ↔ regras)** mede um universo, não só o que o manifest declara: arquivos no perímetro (`ruleCodeGlobs`) + código que as specs citam como regra + arquivos de comportamento nas mesmas pastas (heurística, sem DTOs, modelos, comandos e interfaces). Uma regra só está ligada se está **no perímetro e citada por uma spec**; citada fora do perímetro, no perímetro sem spec ou irmã sem nenhum dos dois contam como lacuna. Arquivos revisados que não são regra saem do universo em `docs.rule_exclude_globs`. A ação `sdd-adopt` também **completa um SDD já adotado**: amplia o perímetro com as pastas que as specs já citam (revisável, ou `--param rule_globs=a,b` / `perimeter=none`) e devolve uma tarefa guiada para documentar as regras sem spec.

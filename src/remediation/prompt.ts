@@ -17,8 +17,8 @@ export function optimizePrompt(root: string, fix: Pick<FixSuggestion, "id" | "gr
     "",
     "Escopo: trate somente esta ação; não faça outras correções nem altere o critério ou a rubrica.",
     fix.branch === "new"
-      ? "Siga o fluxo da skill: previsão de tokens e minha confirmação antes de gastar; esta ação usa uma BRANCH NOVA (nunca a branch atual), informando o nome na tela, e se já houver uma sessão de correção aberta neste repo, use a MESMA branch dela em vez de criar outra; recalcule a nota nessa branch; a decisão de merge, manter ou descartar é minha."
-      : "Siga o fluxo da skill: previsão de tokens e minha confirmação antes de gastar; aplique na BRANCH ATUAL com um commit por ação (informe qual é a branch antes de aplicar), sem criar branch nova, a menos que já exista uma sessão de correção aberta neste repo (aí use a branch dela); recalcule a nota depois e diga como desfazer.",
+      ? "Siga o fluxo da skill: previsão de tokens e minha confirmação antes de gastar; esta ação usa uma BRANCH NOVA (nunca a branch atual), informando o nome na tela, e se já houver uma sessão de correção aberta neste repo, use a MESMA branch dela em vez de criar outra; NÃO faça commit: só crie, altere e remova arquivos, o commit é meu; recalcule a nota e liste os arquivos."
+      : "Siga o fluxo da skill: previsão de tokens e minha confirmação antes de gastar; aplique na BRANCH ATUAL (informe qual é antes de aplicar), sem criar branch nova, a menos que já exista uma sessão de correção aberta neste repo (aí use a branch dela); NÃO faça commit: só crie, altere e remova arquivos, o commit é meu; recalcule a nota e liste os arquivos.",
   ];
   if (fix.kind === "auto") lines.push("Esta ação é automática (0 tokens).");
   return lines.join("\n");

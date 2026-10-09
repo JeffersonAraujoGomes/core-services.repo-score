@@ -53,8 +53,8 @@ export interface Action {
   /** auto = só script (0 tokens); guided = o Claude redige (gasta tokens); mixed = os dois. */
   kind: "auto" | "guided" | "mixed";
   /**
-   * Onde a ação grava. `current` (padrão): commits na branch atual, um por ação, fáceis de reverter. `new`: só quando a
-   * ação não pode rodar na branch atual (ex.: o SDD, cujos hooks barram os commits) e precisa de uma branch dedicada.
+   * Onde a ação grava (sempre sem commit: o commit é do usuário). `current` (padrão): no working tree da branch atual.
+   * `new`: só quando a ação precisa de uma branch dedicada (ex.: o SDD, cujos hooks do repo agem nos commits).
    */
   branch?: "new" | "current";
   requires: Requirement[];

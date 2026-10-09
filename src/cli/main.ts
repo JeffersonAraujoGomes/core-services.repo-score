@@ -47,16 +47,17 @@ const USAGE = `repo-score <comando>
       Lista as ações de correção dos grupos avaliados, com melhoria potencial de nota, tokens e pré-requisitos.
   fix preview <repo> --actions a,b [--param k=v ...]
       Mostra o que cada ação faria. Não escreve nada e não cria branch.
-  fix start <repo> --actions a,b [--param k=v ...] [--groups a,b] [--allow-dirty] [--skip-hooks] [--new-branch] [--branch nome]
-      Aplica as ações e commita (um commit por ação) na BRANCH ATUAL. Só o sdd-adopt, --new-branch, HEAD destacado ou uma
-      sessão já aberta usam uma BRANCH NOVA (a atual não é tocada). Ações guiadas devolvem tarefas.
+  fix start <repo> --actions a,b [--param k=v ...] [--groups a,b] [--allow-dirty] [--new-branch] [--branch nome] [--commit]
+      Cria, altera e remove arquivos NO WORKING TREE, sem commitar: o commit é seu. Grava na branch atual; só o sdd-adopt,
+      --new-branch, HEAD destacado ou uma sessão já aberta usam uma BRANCH NOVA (a atual não é tocada). Ações guiadas
+      devolvem tarefas. --commit (opt-in, a skill não usa) commita uma ação por vez; --skip-hooks só vale com ele.
   fix resume <repo> [--skip-hooks]
-      Retoma uma correção com commit bloqueado por hook: commita o que ficou preparado e aplica as ações que não rodaram.
+      Só com --commit: retoma uma correção cujo commit foi bloqueado por hook.
   fix seal <repo> [--skip-hooks]
-      Commita o que faltar e RECALCULA A NOTA na branch da correção, comparando com a nota de partida.
+      RECALCULA A NOTA no working tree, comparando com a nota de partida, e lista os arquivos alterados. Não commita.
   fix finish <repo> --decision merge|keep|discard [--confirm]
-      Branch nova: mesclar na origem (sem push), manter para revisar ou descartar. Na branch atual: keep encerra; discard
-      desfaz com commits de revert (--confirm); merge não se aplica.
+      Branch atual: keep encerra (não há merge nem commit a desfazer). Branch nova: keep fica nela com os arquivos para você
+      commitar; merge (depois de você commitar) mescla na origem, sem push; discard apaga a branch e os arquivos (--confirm).
   fix status <repo>
       Mostra a correção em andamento.
 `;
@@ -304,7 +305,7 @@ async function main(argv: string[]): Promise<number> {
     if (sub === "start") {
       if (actionIds.length === 0) throw new FixError("informe --actions (veja `fixes`)");
       const branch = flag(rest, "branch");
-      const state = await startFix({ root: target, rubricPath, actionIds, params, ...(groups ? { groups } : {}), ...(policyPath ? { policyPath } : {}), allowDirty: rest.includes("--allow-dirty"), skipHooks: rest.includes("--skip-hooks"), newBranch: rest.includes("--new-branch"), ...(branch ? { branchName: branch } : {}) });
+      const state = await startFix({ root: target, rubricPath, actionIds, params, ...(groups ? { groups } : {}), ...(policyPath ? { policyPath } : {}), allowDirty: rest.includes("--allow-dirty"), skipHooks: rest.includes("--skip-hooks"), newBranch: rest.includes("--new-branch"), commit: rest.includes("--commit"), ...(branch ? { branchName: branch } : {}) });
       out(state, formatStart(state));
       return state.status === "commit_blocked" ? 4 : 0;
     }

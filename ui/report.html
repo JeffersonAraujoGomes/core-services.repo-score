@@ -414,7 +414,7 @@ footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
       const fresh = f.branch === "new";
       const cmdBox = f.prompt ? h("div", { class: "fix-cmd", id: "opt-" + f.id, hidden: "" },
         h("ol", {}, h("li", {}, "Cole o comando na sessão do Claude e envie."), h("li", {}, "O Claude mostra o custo em tokens e pede a sua confirmação antes de alterar qualquer coisa."),
-          h("li", {}, fresh ? "Esta ação usa uma branch nova (a atual não é tocada); o merge é decisão sua." : "As mudanças são commitadas na branch atual, um commit por ação, e dá para desfazer.")),
+          h("li", {}, fresh ? "Esta ação cria uma branch nova (a atual não é tocada). Os arquivos ficam no working tree, sem commit." : "Os arquivos são criados, alterados ou removidos no working tree da branch atual. Nada é commitado.")),
         h("pre", {}, f.prompt)) : null;
       const gain = f.potential ? h("div", { class: "gain-big", title: "teto: se os critérios medidos abaixo de 2 chegarem a 2" }, h("span", {}, "ganho potencial"), h("b", {}, `até +${NF(1).format(f.potential.gain_total)} pts`)) : null;
       const cta = f.prompt
@@ -433,7 +433,7 @@ footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
         cta, cmdBox);
     });
     return h("div", {}, h("div", { class: "card" }, cards),
-      h("p", { class: "callout" }, "Nada é alterado por este relatório. ", h("b", {}, "Otimizar nota"), " copia o comando que inicia só aquela correção na sessão do Claude. As mudanças são commitadas na ", h("b", {}, "branch atual"), ", um commit por ação, e dá para desfazer; só a adoção do SDD usa uma ", h("b", {}, "branch nova"), " (e, com uma sessão assim aberta, os demais botões entram nela). A nota é recalculada depois. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));
+      h("p", { class: "callout" }, "Nada é alterado por este relatório. ", h("b", {}, "Otimizar nota"), " copia o comando que inicia só aquela correção na sessão do Claude. A skill só cria, altera e remove arquivos na ", h("b", {}, "branch atual"), " e ", h("b", {}, "não faz commit"), ": você revisa com git diff e commita quando quiser. Só a adoção do SDD usa uma ", h("b", {}, "branch nova"), " (e, com uma sessão assim aberta, os demais botões entram nela). A nota é recalculada depois. Grupo: " + [...new Set(list.map((f) => groupTitle(f.group)))].join(", ") + "."));
   }
   function panels() {
     const list = D.panels || [];
