@@ -486,7 +486,7 @@ footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
     panels(),
     h("h2", {}, "Detalhes da medição"),
     notes(),
-    h("footer", {}, `A nota é calculada por script a partir da rubrica ${m.rubric_version}; o Claude não atribui pontos. Cada pontuação carrega evidência verificada contra o repositório. Gerado por core-services-repo-score ${m.tool_version} · ${m.collectors.length} critérios com coletor automático.`),
+    h("footer", {}, `A nota é calculada por script a partir da rubrica ${m.rubric_version}; o Claude não atribui pontos. Cada pontuação carrega evidência verificada contra o repositório. Gerado por core-services.repo-score ${m.tool_version} · ${m.collectors.length} critérios com coletor automático.`),
   ];
   app.append(...parts.flat().filter(Boolean));
 

@@ -10,7 +10,9 @@ const args = process.argv.slice(2);
 const flag = (n) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : undefined; };
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillsDir = path.resolve(flag("skills-dir") ?? path.join(os.homedir(), ".claude", "skills"));
-const MARKER = ".installed-by-core-services-repo-score";
+const MARKER = ".installed-by-core-services.repo-score";
+const LEGACY_MARKER = ".installed-by-core-services-repo-score"; // nome anterior do projeto: instalações antigas continuam reconhecidas
+const PROJECT_DIRS = ["core-services.repo-score", "core-services-repo-score"];
 const version = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")).version;
 
 const SKILLS = [
@@ -32,7 +34,9 @@ for (const { name, src } of SKILLS) {
   // Só substitui o que foi instalado por este script (ou com --force).
   if (present(dest)) {
     const st = lstatSync(dest);
-    const ours = st.isSymbolicLink() ? path.resolve(path.dirname(dest), readlinkSync(dest)) === src : existsSync(path.join(dest, MARKER));
+    // link: aponta para esta pasta (ou para o mesmo projeto sob o nome antigo); cópia: tem o marcador atual ou o legado
+    const pointsToProject = (target) => PROJECT_DIRS.some((d) => target.split(path.sep).includes(d)) && target.endsWith(path.relative(root, src));
+    const ours = st.isSymbolicLink() ? path.resolve(path.dirname(dest), readlinkSync(dest)) === src || pointsToProject(path.resolve(path.dirname(dest), readlinkSync(dest))) : existsSync(path.join(dest, MARKER)) || existsSync(path.join(dest, LEGACY_MARKER));
     if (!ours && !args.includes("--force")) {
       console.error(`${dest} já existe e não foi instalado por este projeto. Use --force para substituir.`);
       process.exit(1);

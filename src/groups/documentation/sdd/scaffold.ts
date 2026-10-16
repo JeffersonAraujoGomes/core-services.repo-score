@@ -8,6 +8,7 @@ import { MANIFEST_PATH, readManifest, type SddManifest } from "../shared/manifes
 import { suggestRuleGlobs } from "./detect.js";
 import { lintSpecs } from "./discovery/lint.js";
 import { buildSpecPlanCached, type SpecPlan } from "./discovery/plan.js";
+import { PATH_RULES_BLOCK } from "../shared/path-rules.js";
 import { audienceOfFile } from "./audience.js";
 import { STANDARD_BRIEF } from "./spec-standard.js";
 import { adoptionTasks, migrationTasks } from "./tasks.js";
@@ -91,6 +92,9 @@ export function skillInstructions(m: SddManifest): string {
     `Leia \`${m.specsDir}/\` (comece pelo README.md) e reescreva o arquivo mantendo o frontmatter \`name: ${m.skillSlug}\`, com \`description\` citando os temas de negócio reais das specs.`,
     "O corpo segue este roteiro: Fonte de verdade (link para o README das specs); Mapa rápido spec → código (tabela real, a partir das citações `Arquivo: caminho`); Casos de teste obrigatórios por tipo de mudança; Revisão de conflitos entre regras (checklist específico deste domínio, não genérico); Ciclo SDD detalhado; Princípios.",
     "Sem marcadores TODO/TBD no resultado. Só fatos verificáveis nas specs e no código; se algo não existir, não invente.",
+    "",
+    PATH_RULES_BLOCK,
+    "",
     `Altere somente \`${m.skillPath}\`.`,
   ].join("\n");
 }

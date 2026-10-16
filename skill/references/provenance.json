@@ -1,0 +1,12 @@
+{
+  "project": "core-services.repo-score",
+  "version": "0.1.0",
+  "repository": null,
+  "commit": "bf24d498727681699f233ffc32fb33641c63ea3a",
+  "dirty": true,
+  "bundle_sha256": "ec37328523f395a924f02157ed238ff86dd92059027b6947333938dd4ad78ebf",
+  "bundle_bytes": 1027963,
+  "node": "20.20.2",
+  "esbuild": "0.28.2",
+  "typescript": "7.0.2"
+}

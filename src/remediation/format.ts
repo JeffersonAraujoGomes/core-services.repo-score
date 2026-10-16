@@ -137,6 +137,16 @@ export function formatSeal(r: SealResult): string {
   }
   const diff = criterionDiff(s.baseline, a);
   L.push(diff.length ? `Critérios que mudaram: ${diff.join("; ")}` : "Nenhum critério mudou de pontuação.");
+  if (s.regressions?.length) {
+    L.push("\nPIOROU em relação à partida: corrija a CAUSA antes de seguir ou resumir (não apresente esta correção como concluída):");
+    for (const r of s.regressions) {
+      L.push(`  ✕ ${r.id} ${r.title}: ${r.from}/2 → ${r.to}/2`);
+      for (const e of r.evidence) L.push(`      ${e}`);
+      const hints = [r.id === "D4" ? `rode \`check refs <repo>\` e corrija cada caminho apontado` : "", r.suggested_action ? `ou rode \`fix start --actions ${r.suggested_action}\` (automática, 0 tokens, mesma sessão)` : ""].filter(Boolean);
+      if (hints.length) L.push(`      → ${hints.join(" ")}; depois rode fix seal de novo`);
+    }
+    L.push("");
+  }
   if (a.blocked_by.length) L.push(`GATE ACIONADO: ${a.blocked_by.join(", ")}`);
   const checks = data.panels.filter((p) => p.group === "documentation").flatMap((p) => p.items).filter((i) => i.label === "Padrão das specs" || i.status === "fail");
   if (checks.length) {

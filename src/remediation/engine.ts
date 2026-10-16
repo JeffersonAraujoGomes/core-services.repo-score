@@ -8,10 +8,12 @@ import { renderReport } from "../report/render.js";
 import type { Grade } from "../schema/rubric.js";
 import { applyChanges, safeTarget, summarizeChange } from "./apply.js";
 import { branchExists, currentBranch, git, GitError, headSha, isClean, isRepo, repoTop, tryGit, uniqueBranchName } from "./git.js";
+import { COMMIT_PATHS_ENABLED, commitAll, mergeBranch, revertCommits, type CommitInfo } from "./commit-paths.js";
 import type { Action, GuidedTask } from "./types.js";
 import { hasCommand } from "../util/proc.js";
 
-export class FixError extends Error {}
+import { FixError } from "./errors.js";
+export { FixError };
 
 export interface ScoreSummary {
   grade: Grade;
@@ -23,10 +25,7 @@ export interface ScoreSummary {
   blocked_by: string[];
 }
 
-export interface CommitInfo {
-  sha: string;
-  subject: string;
-}
+export type { CommitInfo };
 
 export type FixStatus = "started" | "commit_blocked" | "sealed" | "merged" | "kept" | "discarded" | "nothing_to_do";
 
@@ -61,6 +60,8 @@ export interface FixState {
   not_applied?: string[];
   /** O que o último `fix start` fez nesta branch: criou a sessão ou reaproveitou a que já estava aberta. */
   session?: { reused: boolean; added_actions: string[]; added_tasks: string[]; rounds: number };
+  /** Critérios que PIORARAM em relação à nota de partida (a correção feriu algo): a causa deve ser corrigida antes de seguir. */
+  regressions?: { id: string; title: string; from: number; to: number; evidence: string[]; suggested_action: string | null }[];
   /** Ações da sessão que, medido na branch, ainda têm ganho de nota: rode `fix start --actions <id>` de novo (mesma branch). */
   pending?: { id: string; title: string; gain: number }[];
 }
@@ -187,7 +188,7 @@ function runActions(root: string, policyPath: string | undefined, actions: Actio
     state.touched = [...new Set([...(state.touched ?? []), ...touched])];
     if (!state.auto_commit) continue;
     try {
-      const c = commit(root, touched, `docs(repo-score): ${action.title}\n\nAção ${action.id}; critérios: ${action.criteria.join(", ")}.${skipHooks ? "\n\nHooks pulados com aprovação explícita do usuário (SDD_SKIP=1)." : ""}`, skipHooks);
+      const c = commitAll(root, touched, `docs(repo-score): ${action.title}`, `Ação ${action.id}; critérios: ${action.criteria.join(", ")}.`, skipHooks);
       if (c) state.commits.push(c);
     } catch (e) {
       state.status = "commit_blocked";
@@ -241,20 +242,11 @@ export function fixTarget(opts: { root: string; actionIds: string[]; newBranch?:
   return { mode: "in_place", branch: current, reason: "as alterações ficam no working tree da branch atual, sem commit (o commit é seu)", session: null };
 }
 
-function commit(root: string, paths: string[] | null, message: string, skipHooks: boolean): CommitInfo | null {
-  git(root, paths ? ["add", "-A", "--", ...paths] : ["add", "-A"]);
-  if ((tryGit(root, ["diff", "--cached", "--name-only"]) ?? "").trim() === "") return null;
-  const args = ["commit", "-q", "-m", message, ...(skipHooks ? ["--no-verify"] : [])];
-  git(root, args, skipHooks ? { SDD_SKIP: "1" } : {});
-  const sha = git(root, ["rev-parse", "--short", "HEAD"]).trim();
-  return { sha, subject: message.split("\n")[0]! };
-}
-
 /** Commita o que ficou na working tree da branch da sessão (trabalho guiado da rodada anterior). Devolve false se um hook bloqueou. */
 function commitPending(root: string, state: FixState, skipHooks: boolean): boolean {
   try {
     const ids = state.guided_tasks.map((t) => t.id).join(", ");
-    const c = commit(root, null, `docs(repo-score): ajustes${ids ? ` guiados (${ids})` : ""}`, skipHooks);
+    const c = commitAll(root, null, `docs(repo-score): ajustes${ids ? ` guiados (${ids})` : ""}`, "", skipHooks);
     if (c) state.commits.push(c);
     delete state.blocked;
     state.status = "started";
@@ -313,6 +305,7 @@ export async function startFix(opts: StartOptions): Promise<FixState> {
   }
   if (target.session) return addToSession(opts, root, target.session, actions, now);
   const inPlace = target.mode === "in_place";
+  if (opts.commit && !COMMIT_PATHS_ENABLED) throw new FixError("--commit não existe nesta versão da skill: ela só cria, altera e remove arquivos, e o commit é seu.");
   const autoCommit = !!opts.commit;
   // sem commit automático, na branch atual, as alterações do usuário convivem com as da skill (o commit é dele); nos demais casos a árvore precisa estar limpa
   const mustBeClean = autoCommit || !inPlace;
@@ -388,7 +381,7 @@ export async function resumeFix(opts: { root: string; policyPath?: string; skipH
   const now = opts.now ?? new Date();
   const blockedAction = allActions().find((a) => a.id === state.blocked?.action);
   try {
-    const c = commit(root, null, `docs(repo-score): ${blockedAction?.title ?? "ajustes"}${opts.skipHooks ? "\n\nHooks pulados com aprovação explícita do usuário (SDD_SKIP=1)." : ""}`, !!opts.skipHooks);
+    const c = commitAll(root, null, `docs(repo-score): ${blockedAction?.title ?? "ajustes"}`, "", !!opts.skipHooks);
     if (c) state.commits.push(c);
   } catch (e) {
     state.blocked = { action: state.blocked?.action ?? "?", output: e instanceof GitError ? e.stderr || e.message : (e as Error).message };
@@ -430,6 +423,7 @@ export async function sealFix(opts: { root: string; rubricPath: string; policyPa
   const after = await analyze({ root, rubricPath: opts.rubricPath, groups: state.groups, ...(opts.policyPath ? { policyPath: opts.policyPath } : {}), ...(opts.now ? { now: opts.now } : {}) });
   const persisted = persist(after.outDir, after.data, renderReport(after.data));
   state.after = summarize(after.data);
+  state.regressions = findRegressions(state.baseline, state.after, after.data);
   // ações da sessão que ainda têm ganho de nota medido (ação só com tarefa sem efeito na nota não entra)
   state.pending = after.data.fixes.filter((f) => state.actions.includes(f.id) && f.prompt !== null && (f.potential?.gain_total ?? 0) > 0).map((f) => ({ id: f.id, title: f.title, gain: f.potential!.gain_total }));
   if (state.status !== "commit_blocked") state.status = "sealed";
@@ -437,6 +431,23 @@ export async function sealFix(opts: { root: string; rubricPath: string; policyPa
   // sem commit automático, o que mudou está no working tree; com commits, o diff em relação à origem
   const files = state.auto_commit ? (tryGit(root, ["diff", "--stat", `${state.base_commit}...HEAD`]) ?? "") : (tryGit(root, ["status", "--short", "--untracked-files=all"]) ?? "");
   return { state, data: after.data, files: files.trimEnd(), report: persisted.html };
+}
+
+/** Critérios que caíram em relação à partida, com as evidências atuais e a ação que costuma reparar (se ainda houver). */
+export function findRegressions(before: ScoreSummary, after: ScoreSummary, data: ReportData): NonNullable<FixState["regressions"]> {
+  const outcomes = new Map(Object.values(data.result.dimensions).flatMap((d) => d.criteria).map((c) => [c.id, c]));
+  const out: NonNullable<FixState["regressions"]> = [];
+  for (const [id, to] of Object.entries(after.criteria)) {
+    const from = before.criteria[id] ?? null;
+    if (from === null || to === null || to >= from) continue;
+    const o = outcomes.get(id);
+    const evidence = o && o.state === "scored"
+      ? o.evidence.slice(0, 6).map((e) => (e.kind === "file" ? `${e.path}:${e.line}${e.snippet ? `  ${e.snippet}` : ""}${e.note ? `  (${e.note})` : ""}` : e.kind === "job" ? `${e.name}${e.note ? `: ${e.note}` : ""}` : e.kind))
+      : [];
+    const fix = data.fixes.find((f) => f.criteria.includes(id) && f.prompt !== null && f.kind === "auto");
+    out.push({ id, title: data.criteria[id]?.title ?? id, from, to, evidence, suggested_action: fix?.id ?? null });
+  }
+  return out;
 }
 
 // ─────────────────────────────────────── finish ───────────────────────────────────────
@@ -487,6 +498,9 @@ export function finishFix(opts: { root: string; decision: Decision; confirm?: bo
     saveState(state);
     return { state, decision: "keep", message: `Mantido: você segue na branch ${state.branch} com as alterações ainda não commitadas. Revise (git status, git diff) e commite quando quiser; depois mescle em ${state.base_branch ?? state.base_commit} do seu jeito.` };
   }
+  if (opts.decision === "merge" && !COMMIT_PATHS_ENABLED) {
+    throw new FixError(`o merge feito pela skill não existe nesta versão: ela não cria commits. Commite na branch ${state.branch} e mescle você mesmo (git switch ${state.base_branch ?? state.base_commit} && git merge ${state.branch}).`);
+  }
   back();
   if (opts.decision === "keep") {
     state.status = "kept";
@@ -495,9 +509,9 @@ export function finishFix(opts: { root: string; decision: Decision; confirm?: bo
   }
 
   try {
-    git(root, ["merge", "--no-ff", "-m", `Merge branch '${state.branch}' (repo-score)`, ...(opts.skipHooks ? ["--no-verify"] : []), state.branch], opts.skipHooks ? { SDD_SKIP: "1" } : {});
+    mergeBranch(root, state.branch, !!opts.skipHooks);
   } catch (e) {
-    tryGit(root, ["merge", "--abort"]);
+    if (e instanceof FixError) throw e;
     throw new FixError(`o merge teve conflito ou foi bloqueado e foi desfeito; a branch ${state.branch} segue intacta. ${(e as Error).message}`);
   }
   state.status = "merged";
@@ -527,9 +541,9 @@ function finishInPlace(root: string, state: FixState, opts: { decision: Decision
   const shas = [...state.commits].reverse().map((c) => c.sha);
   if (shas.length) {
     try {
-      git(root, ["revert", "--no-edit", ...shas]);
+      revertCommits(root, shas);
     } catch (e) {
-      tryGit(root, ["revert", "--abort"]);
+      if (e instanceof FixError) throw e;
       throw new FixError(`não foi possível reverter (conflito com commits posteriores); nada foi alterado. ${(e as Error).message}`);
     }
   }

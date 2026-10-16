@@ -1,3 +1,4 @@
+import { PATH_RULES, PATH_RULES_TITLE } from "../shared/path-rules.js";
 import type { Audience } from "./audience.js";
 
 /**
@@ -159,4 +160,6 @@ export const STANDARD_BRIEF = [
   "- **[BUS]: `## O que a regra faz` em linguagem de produto**, como numa documentação para o time de negócio e produto: descreva o que acontece com o cliente, o contrato ou a operação e em que condições. NÃO cite nomes de classes, métodos, variáveis, campos, interfaces, enums nem arquivos nesse bloco (nada entre crases); termos técnicos entram em `## Parâmetros` (nome de negócio primeiro, nome técnico entre parênteses) e em `## Contexto`. O título do `#` pode ser reescrito em linguagem de negócio; o nome do arquivo não muda.",
   "- **[ENG]**: linguagem de engenharia, direta; pode citar tipos, métodos e filas. Se o conteúdo mostrar que a marcação do nome está errada, escreva a spec mesmo assim e avise na resposta qual deveria trocar.",
   "- Proibido: TODO/TBD, segredos, credenciais e dados pessoais, inventar comportamento que você não leu no código ou no documento-fonte.",
+  `- **${PATH_RULES_TITLE}:**`,
+  PATH_RULES,
 ].join("\n");

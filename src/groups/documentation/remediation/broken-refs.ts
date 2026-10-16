@@ -5,6 +5,16 @@ import type { ActionPlan, FileChange } from "../../../remediation/types.js";
 import { brokenRefs } from "../collectors/d4-path-refs.js";
 import { basename, dirname, getDocIndex } from "../shared/docs-set.js";
 
+/** Destino inequívoco para uma referência quebrada: o único arquivo do repo com o mesmo nome (null se não há ou há vários). */
+export function refSuggester(ctx: Ctx): (b: { doc: string; raw: string; kind: string }) => { target: string | null; candidates: number } {
+  const byName = new Map<string, string[]>();
+  for (const f of ctx.files) byName.set(basename(f), [...(byName.get(basename(f)) ?? []), f]);
+  return (b) => {
+    const cands = (byName.get(basename(b.raw)) ?? []).filter((c) => c !== b.doc);
+    return { target: cands.length === 1 ? cands[0]! : null, candidates: cands.length };
+  };
+}
+
 /** Corrige só referências quebradas cujo arquivo de destino é inequívoco (mesmo nome em um único lugar do repo). */
 export function planBrokenRefs(ctx: Ctx): ActionPlan | null {
   const { broken } = brokenRefs(ctx);

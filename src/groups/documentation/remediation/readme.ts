@@ -3,6 +3,7 @@ import type { Ctx } from "../../../collectors/context.js";
 import type { ActionPlan, GuidedTask } from "../../../remediation/types.js";
 import { readmeStatuses } from "../collectors/d1-readme.js";
 import { loadCodeowners, ownersFor } from "../shared/codeowners.js";
+import { PATH_RULES_BLOCK } from "../shared/path-rules.js";
 
 
 /** Fatos verificáveis sobre o app, para o Claude redigir o README sem inventar. */
@@ -56,6 +57,9 @@ export function planReadme(ctx: Ctx): ActionPlan | null {
         `Seções obrigatórias que faltam (o título de cada uma deve casar com um destes padrões, em pt ou en): ${s.missing.map((m) => `${m.label} [${m.match.join(" | ")}]`).join("; ")}.`,
         `Fatos verificáveis do app: ${facts.length ? facts.join(" · ") : "(poucos; leia o código e a pasta do app)"}.`,
         "Regras: preserve o conteúdo existente; escreva só o que pode ser confirmado no repo; se uma seção não se aplica, diga isso e por quê; sem marcadores TODO/TBD nem texto-modelo; links apenas para arquivos que existem.",
+        "",
+        PATH_RULES_BLOCK,
+        "",
         `Altere somente \`${target}\`.`,
       ].join("\n"),
     });

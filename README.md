@@ -1,4 +1,4 @@
-# core-services-repo-score
+# core-services.repo-score
 
 Skill local do Claude Code que avalia um repositório contra o **Platform Repository Maturity Score v2.3** (7 dimensões, 71 critérios, nota E–S) e abre o resultado em um relatório HTML no navegador.
 
@@ -18,7 +18,7 @@ Segredos achados nunca são reproduzidos: a evidência traz só arquivo, linha e
 Requer Node 20 ou mais (só para executar a análise; a skill avisa como instalar se faltar).
 
 ```bash
-git clone <este-repo> && cd core-services-repo-score
+git clone <este-repo> && cd core-services.repo-score
 npm install
 npm run install-skill             # copia repo-score e reposcore para ~/.claude/skills
 npm run install-skill -- --link   # alternativa para desenvolver a skill (links simbólicos)
@@ -61,7 +61,9 @@ Grupos não escolhidos ficam fora do cálculo (como dimensão N/A) e o total usa
 
 Depois de abrir o relatório, cada ponto de "Como subir a nota" tem um botão **Otimizar nota** que copia o comando para a sessão do Claude e inicia só aquela correção. A skill só cria, altera e remove arquivos: **o commit é seu** (só a adoção do SDD usa uma branch nova). As ações são ranqueadas pelo ganho potencial de nota, com tipo (automática, guiada ou mista), tokens estimados e pré-requisitos. A principal é **adotar o SDD** (specs vivas + gate de commit com IA), incorporado do projeto `core-services.sdd-gate-ia`.
 
-**Onde grava:** a skill **não commita**: cria, altera e remove arquivos e deixa o commit com você (`git diff`, `git commit`). As ações comuns escrevem no working tree da **branch atual**. A adoção do SDD é a exceção: cria uma **branch nova** (`docs/repo-score-AAAAMMDD-HHMM`), a atual não é tocada, e com essa sessão aberta os demais botões entram nela. A nota é **recalculada** depois e comparada com a de partida, e o `fix seal` lista os arquivos e sugere a mensagem de commit. `--commit` (opt-in do CLI, nunca usado pela skill) commita uma ação por vez. Nunca há push. Árvore suja é recusada, um commit bloqueado por hook do time não é contornado sem aprovação, e arquivos que não são UTF-8 nunca são reescritos.
+**Onde grava:** a skill **não commita**: cria, altera e remove arquivos e deixa o commit com você (`git diff`, `git commit`). As ações comuns escrevem no working tree da **branch atual**. A adoção do SDD é a exceção: cria uma **branch nova** (`docs/repo-score-AAAAMMDD-HHMM`), a atual não é tocada, e com essa sessão aberta os demais botões entram nela. A nota é **recalculada** depois e comparada com a de partida, e o `fix seal` lista os arquivos e sugere a mensagem de commit. No código-fonte existe um caminho opt-in (`--commit`, merge e revert) só para desenvolvimento e testes; o **bundle publicado não o contém** (`src/remediation/commit-paths.ts` é trocado por um stub que recusa, e um teste confere que `git commit`, `--no-verify`, `merge` e `revert` não estão no bundle). Nunca há push.
+
+**Rastreabilidade do bundle:** `skill/scripts/repo-score.mjs` é gerado (esbuild). `skill/references/provenance.json` e o bloco "Origem e integridade" do `SKILL.md` registram projeto, versão, commit da fonte, ferramentas e o SHA-256; `node skill/scripts/repo-score.mjs integrity` confere o arquivo em execução, e `tests/bundle.test.ts` reconstrói o bundle a partir do `src/` e falha se o hash divergir (rode `npm run build`). Para publicar, use `npm run package-skill -- --release`, que recusa um bundle construído de árvore suja. Defina `repository` no `package.json` para a URL de origem aparecer no registro. Árvore suja é recusada, um commit bloqueado por hook do time não é contornado sem aprovação, e arquivos que não são UTF-8 nunca são reescritos.
 
 ```bash
 CLI=skill/scripts/repo-score.mjs
@@ -69,7 +71,7 @@ node $CLI fixes <repo> --groups documentation                                  #
 node $CLI fix preview <repo> --actions doc-hygiene,doc-owners                  # não escreve nada
 node $CLI fix start <repo> --actions sdd-adopt --param rule_globs='src/Domain/Rules/*'   # cria a branch, sem commit
 node $CLI fix seal <repo>                                                      # recalcula a nota e lista os arquivos (commit é seu)
-node $CLI fix finish <repo> --decision keep|merge|discard [--confirm]
+node $CLI fix finish <repo> --decision keep|discard [--confirm]
 ```
 
 **Escala (ajuste local):** a rubrica é a v2.3 com um ajuste, registrado em `skill/references/rubric.json` (`local_adjustments`, versão 2.3.1): o D7 pesa 4 em vez de 1. Motivo: com peso 1 de 12, um repo sem nenhuma spec ainda chegava a A. Além disso, sem SDD num repo com regra de negócio (3 ou mais arquivos de regra identificados), o D7 é medido como 0% e não excluído do cálculo. Desvio local: a nota não é comparável com a oficial.

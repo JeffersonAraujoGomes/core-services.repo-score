@@ -23,12 +23,13 @@ A primeira etapa é **só medir e abrir o relatório**. Nada é alterado e nenhu
 
 3. **Pré-requisitos.** Rode `CLI plan "<repo>" --json` (não mede nada; exit 3 = bloqueio). Mostre de forma curta: `blockers` (explique e pare), `tools` ausentes com o comando de instalação e `warnings` (um item por linha) e, se `repo.dirty`, que a análise considera alterações não commitadas.
 
-4. **Quais dimensões entram na nota?** **Sempre mostre as 7 dimensões e "Todas"**, mesmo as desativadas, e deixe o usuário escolher qualquer uma delas (seleção múltipla). Com AskUserQuestion (máximo de 4 opções por pergunta), use **duas perguntas na mesma chamada**:
-   - "Dimensões (1/2)": Segurança, Testes e CI, Código, Arquitetura;
-   - "Dimensões (2/2)": Operabilidade, Documentação, Processo, Todas.
-   Na descrição de cada opção, ponha o peso e `ativa` ou `desativada` (de `groups[].enabled` do JSON do `plan`; hoje só Documentação está ativa). Sem AskUserQuestion, liste as 8 opções em texto e espere a resposta. Se o usuário já nomeou as dimensões no pedido, pule a pergunta.
+4. **Quais dimensões entram na nota?** **Sempre mostre as 7 dimensões**, mesmo as desativadas, e deixe o usuário escolher qualquer uma delas.
+   - **Primeiro, imprima em texto** uma lista das 7 (de `groups[]` do JSON do `plan`): nome (Segurança, Testes e CI, Código, Arquitetura, Operabilidade, Documentação, Processo), peso e `ativa` ou `desativada` (hoje só Documentação está ativa).
+   - **Depois, faça UMA pergunta de escolha única** (AskUserQuestion), nunca de seleção múltipla: o botão "Próximo" do app não avança sem marcar algo, e uma pergunta em que o usuário só quer "nenhuma destas" trava a jornada. Opções: "Todas as ativas (Recomendado)" (diga na descrição quais são) e "Escolher dimensões (inclusive desativadas)". O campo "Outro" do app já aceita o usuário digitar os nomes direto.
+   - Se escolher "Escolher dimensões", pergunte **em texto** ("Quais? Ex.: Documentação, Segurança") e espere a resposta. Não use perguntas de múltipla seleção, nem dividida em páginas.
+   - Sem AskUserQuestion, pergunte tudo em texto. Se o usuário já nomeou as dimensões no pedido, pule a pergunta.
    - **Desativada escolhida:** diga na resposta, por nome, que ela está desativada e não entra na nota nesta versão (sem coletor ou fora da configuração), e siga com as ativas escolhidas. Se não sobrar nenhuma ativa, explique e pergunte de novo. Ofereça, sem impor, ativar com `CLI groups set <ids>` (grava em `~/.repo-score/config.json`; `CLI groups reset` volta ao padrão; `REPO_SCORE_ENABLED_GROUPS` tem precedência; o padrão vem de `references/groups.json`). Nunca rode `analyze --groups` com grupo desativado: o comando recusa.
-   - **"Todas"** significa todas as **ativas**; avise quais ficaram de fora.
+   - **"Todas as ativas"** significa só as ativas; avise quais ficaram de fora.
 
 5. **Calcular a nota e abrir o relatório.** `CLI analyze "<repo>" --groups a,b` (omita `--groups` se for "Todas"). Leva poucos segundos, grava em `~/.repo-score/<repo>/` (nada é escrito no repo analisado) e abre o relatório no navegador; sem navegador, informe o caminho. Antes de rodar, diga numa linha que a medição custa 0 tokens, e **não peça confirmação**.
 
@@ -38,7 +39,7 @@ A primeira etapa é **só medir e abrir o relatório**. Nada é alterado e nenhu
 
 ## Modo otimizar (`/repo-score otimizar <ação> "<repo>"`)
 
-É o que o botão **Otimizar nota** envia. Pule os passos 2 a 6 (não pergunte repo nem dimensões, não rode `analyze`) e execute **somente a ação indicada**, seguindo `references/documentation.md` (seção "Otimizar um ponto") para o grupo `documentation`. Resumo: `CLI fixes "<repo>" --groups <grupo> --json` para localizar a ação, prévia com `fix preview --actions <ação>`, **previsão de tokens e confirmação do usuário**, `fix start`, tarefas guiadas e `fix seal` (nota recalculada). **A skill nunca commita:** só cria, altera e remove arquivos, e o commit é do usuário (o `fix seal` lista os arquivos e sugere a mensagem). Ações comuns escrevem no working tree da **branch atual** (diga o nome antes de aplicar e, se for `main`/`master`, deixe explícito); só o `sdd-adopt` usa **branch nova** (também sem commit). **Uma sessão de branch nova, uma branch:** se ela estiver aberta e o usuário clicar em outros botões, o `fix start` reaproveita essa branch (diga qual) e você só encerra com `fix finish` quando ele disser que acabou. Antes de cada ação, rode `CLI fix status "<repo>"` para saber se há sessão aberta. Se a ação não existir mais (o repo mudou), diga e sugira rodar `/repo-score` de novo. Outros grupos ainda não têm ações de correção: avise e não improvise.
+É o que o botão **Otimizar nota** envia. Pule os passos 2 a 6 (não pergunte repo nem dimensões, não rode `analyze`) e execute **somente a ação indicada**, seguindo `references/documentation.md` (seção "Otimizar um ponto") para o grupo `documentation`. Resumo: `CLI fixes "<repo>" --groups <grupo> --json` para localizar a ação, prévia com `fix preview --actions <ação>`, **previsão de tokens e confirmação do usuário**, `fix start`, tarefas guiadas e `fix seal` (nota recalculada). **A skill nunca commita:** só cria, altera e remove arquivos, e o commit é do usuário (o `fix seal` lista os arquivos e sugere a mensagem). Ações comuns escrevem no working tree da **branch atual** (diga o nome antes de aplicar e, se for `main`/`master`, deixe explícito); só o `sdd-adopt` usa **branch nova** (também sem commit). **Uma sessão de branch nova, uma branch:** se ela estiver aberta e o usuário clicar em outros botões, o `fix start` reaproveita essa branch (diga qual) e você só encerra com `fix finish` quando ele disser que acabou. Antes de cada ação, rode `CLI fix status "<repo>"` para saber se há sessão aberta. Depois das tarefas guiadas e **antes do `fix seal`**, rode `CLI check refs "<repo>"` e corrija os caminhos quebrados; se o seal imprimir `PIOROU`, corrija a causa e sele de novo antes de resumir. Se a ação não existir mais (o repo mudou), diga e sugira rodar `/repo-score` de novo. Outros grupos ainda não têm ações de correção: avise e não improvise.
 
 ## Cuidados
 
@@ -69,4 +70,22 @@ A rubrica embutida é a v2.3 com **1 ajuste local** (`local_adjustments` em `ref
 
 ## O que esta versão mede
 
-S1 segredos em config/IaC, S2 segredos no histórico git, S9 imagem base fixada, S12 lockfile, S13 actions por SHA, C12 arquivos grandes, P4 commits convencionais, P5 versionamento central, P6 CODEOWNERS, D3 ADRs vivos. Os demais critérios aparecem como "aguardando coletor" e ficam fora do cálculo.
+**Ativo por padrão (grupo Documentação, é o que entra na nota):** D1 README por app, D2 OWNERS, D3 ADRs vivos, D4 referências de caminho, D5 índice da raiz, D6 documentação sem órfãos, D7 specs ↔ regras (SDD), D8 higiene de docs. O D9 (diagrama) ainda não tem coletor e fica fora do cálculo.
+
+**Disponível, mas desativado por padrão** (só entra na nota depois de `CLI groups set <ids>`): Segurança, com S1 segredos em config/IaC, S2 segredos no histórico git, S9 imagem base fixada, S12 lockfile e S13 actions por SHA; Código, com C12 arquivos grandes; Processo, com P4 commits convencionais, P5 versionamento central e P6 CODEOWNERS.
+
+Os demais critérios aparecem como "aguardando coletor" e ficam fora do cálculo.
+
+<!-- provenance:start (gerado por npm run build; não edite) -->
+## Origem e integridade do bundle
+
+`scripts/repo-score.mjs` é **gerado** (esbuild) a partir do `src/` do projeto de origem e não deve ser editado à mão.
+
+- Projeto de origem: `core-services.repo-score` v0.1.0 (defina `repository` no package.json do projeto para registrar a URL aqui)
+- Commit da fonte: `bf24d498727681699f233ffc32fb33641c63ea3a` **(construído de uma árvore com alterações não commitadas: não reproduzível a partir do commit)**
+- SHA-256 do bundle: `ec37328523f395a924f02157ed238ff86dd92059027b6947333938dd4ad78ebf`
+- Ferramentas: Node 20.20.2, esbuild 0.28.2, TypeScript 7.0.2
+- A skill publicada **não tem código que commite, mescle ou reverta**: esse módulo é trocado por um stub que só recusa.
+
+Verificar: `node scripts/repo-score.mjs integrity` (compara o arquivo em execução com `references/provenance.json`) ou `shasum -a 256 scripts/repo-score.mjs`. Reproduzir: no commit acima, `npm ci && npm run build` e comparar o SHA-256.
+<!-- provenance:end -->

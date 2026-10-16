@@ -1,5 +1,5 @@
 {
-  "name": "core-services-repo-score",
+  "name": "core-services.repo-score",
   "version": "0.1.0",
   "private": true,
   "description": "Platform Repository Maturity Score: skill local que avalia um repositório contra a rubrica v2.3",

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +8,7 @@ import { analyze, persist, type ReportData } from "../analyze.js";
 import { enabledGroups, resetUserEnabled, setUserEnabled, userConfigPath } from "../groups-config.js";
 import { createCtx } from "../collectors/context.js";
 import { loadPolicy } from "../policy.js";
+import { checkRefs, formatRefCheck } from "../groups/documentation/checks.js";
 import { formatLint, lintSpecs } from "../groups/documentation/sdd/discovery/lint.js";
 import { formatSimulation, simulateSdd } from "../groups/documentation/sdd/discovery/simulate.js";
 import { formatPlan, plan } from "../plan.js";
@@ -30,6 +32,8 @@ const USAGE = `repo-score <comando>
       Só o cálculo: verifica evidências (se --repo-root) e pontua um arquivo de resultados.
   validate-rubric [--rubric <rubric.json>]
       Valida o rubric.json e imprime um resumo.
+  integrity [--json]
+      Confere se este arquivo é o bundle registrado em references/provenance.json (commit de origem e SHA-256).
 
   groups
       Mostra quais grupos estão ativados (só eles podem ser escolhidos) e de onde vem essa configuração.
@@ -43,21 +47,24 @@ const USAGE = `repo-score <comando>
   sdd lint <caminho-do-repo>
       Verifica as specs de docs/specs contra o padrão (4 blocos, tamanho, ponteiros Arquivo: existentes).
 
+  check refs <caminho-do-repo> [--all] [--json]
+      Confere por script se cada caminho, link e "Arquivo:" dos documentos resolve (o que o D4 mede). Por padrão só os
+      arquivos alterados ou novos; --all verifica todos. Exit 1 se houver referência quebrada. Rode antes do fix seal.
+
   fixes <caminho-do-repo> [--groups a,b] [--json]
       Lista as ações de correção dos grupos avaliados, com melhoria potencial de nota, tokens e pré-requisitos.
   fix preview <repo> --actions a,b [--param k=v ...]
       Mostra o que cada ação faria. Não escreve nada e não cria branch.
-  fix start <repo> --actions a,b [--param k=v ...] [--groups a,b] [--allow-dirty] [--new-branch] [--branch nome] [--commit]
+  fix start <repo> --actions a,b [--param k=v ...] [--groups a,b] [--allow-dirty] [--new-branch] [--branch nome]
       Cria, altera e remove arquivos NO WORKING TREE, sem commitar: o commit é seu. Grava na branch atual; só o sdd-adopt,
       --new-branch, HEAD destacado ou uma sessão já aberta usam uma BRANCH NOVA (a atual não é tocada). Ações guiadas
-      devolvem tarefas. --commit (opt-in, a skill não usa) commita uma ação por vez; --skip-hooks só vale com ele.
-  fix resume <repo> [--skip-hooks]
-      Só com --commit: retoma uma correção cujo commit foi bloqueado por hook.
+      devolvem tarefas. (--commit, --skip-hooks e fix resume só existem no build de desenvolvimento; a skill publicada
+      não tem nenhum caminho que commite.)
   fix seal <repo> [--skip-hooks]
       RECALCULA A NOTA no working tree, comparando com a nota de partida, e lista os arquivos alterados. Não commita.
   fix finish <repo> --decision merge|keep|discard [--confirm]
       Branch atual: keep encerra (não há merge nem commit a desfazer). Branch nova: keep fica nela com os arquivos para você
-      commitar; merge (depois de você commitar) mescla na origem, sem push; discard apaga a branch e os arquivos (--confirm).
+      commitar (o merge é seu); discard apaga a branch e os arquivos (--confirm). merge só no build de desenvolvimento.
   fix status <repo>
       Mostra a correção em andamento.
 `;
@@ -242,6 +249,23 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (cmd === "check") {
+    const [sub, ...rest] = args;
+    const target = positional(rest);
+    if (sub !== "refs" || !target) {
+      console.error("uso: check refs <repo> [--all] [--json]\n\n" + USAGE);
+      return 2;
+    }
+    const root = path.resolve(target);
+    const { policy } = loadPolicy(root, flag(rest, "policy"));
+    const ctx = createCtx(root, policy);
+    const status = ctx.git(["status", "--porcelain", "-z", "--untracked-files=all"]) ?? "";
+    const changed = status.split("\0").filter((l) => l.length > 3 && !l.startsWith(" D") && !l.startsWith("D ")).map((l) => l.slice(3));
+    const result = checkRefs(ctx, rest.includes("--all") || !ctx.isGit ? {} : { files: changed });
+    console.log(rest.includes("--json") ? JSON.stringify(result, null, 2) : formatRefCheck(result));
+    return result.broken.length > 0 ? 1 : 0;
+  }
+
   if (cmd === "sdd") {
     const [sub, ...rest] = args;
     const target = positional(rest);
@@ -333,6 +357,25 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     throw new FixError(`subcomando desconhecido: fix ${sub}`);
+  }
+
+  if (cmd === "integrity") {
+    const self = fileURLToPath(import.meta.url);
+    const here = path.dirname(self);
+    const prov = [path.resolve(here, "../references/provenance.json"), path.resolve(here, "../skill/references/provenance.json"), path.resolve(here, "../../skill/references/provenance.json")].find((c) => existsSync(c));
+    if (!prov) {
+      console.error("references/provenance.json não encontrado: não há registro de origem para conferir.");
+      return 2;
+    }
+    const p = JSON.parse(readFileSync(prov, "utf8")) as { project: string; version: string; repository: string | null; commit: string; dirty: boolean; bundle_sha256: string };
+    const isBundle = path.basename(self) === "repo-score.mjs";
+    const actual = isBundle ? createHash("sha256").update(readFileSync(self)).digest("hex") : null;
+    const ok = actual !== null && actual === p.bundle_sha256;
+    const out = { ok, is_bundle: isBundle, expected_sha256: p.bundle_sha256, actual_sha256: actual, project: p.project, version: p.version, repository: p.repository, commit: p.commit, built_from_dirty_tree: p.dirty };
+    if (args.includes("--json")) console.log(JSON.stringify(out, null, 2));
+    else if (!isBundle) console.log("Este não é o bundle publicado (execução a partir do código-fonte): nada a conferir.");
+    else console.log(`${ok ? "OK" : "DIVERGENTE"}: SHA-256 ${actual}\n  esperado (references/provenance.json): ${p.bundle_sha256}\n  origem: ${p.project} v${p.version}${p.repository ? ` (${p.repository})` : ""} @ ${p.commit || "?"}${p.dirty ? " (construído de árvore suja: não reproduzível a partir do commit)" : ""}`);
+    return ok || !isBundle ? 0 : 1;
   }
 
   if (cmd === "validate-rubric") {
